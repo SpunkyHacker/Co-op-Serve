@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Gig Marketplace</title>
+    <style>
+        /* --- CSS STYLING --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #worker-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .worker-card {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            width: 200px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .worker-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Gig Marketplace</h1>
+    <p>Click the button below to fetch workers from the FastAPI backend.</p>
+    
+    <button id="fetch-btn">Load Workers</button>
+    
+    <div id="worker-container"></div>
+
+    <script>
+        // 1. Grab the button and container elements from the page
+        const fetchBtn = document.getElementById('fetch-btn');
+        const workerContainer = document.getElementById('worker-container');
+
+        // 2. Add a click event listener to the button
+        fetchBtn.addEventListener('click', async () => {
+            // Show a loading message
+            workerContainer.innerHTML = '<p>Loading...</p>';
+
+            try {
+                // 3. Make a GET request to the FastAPI server
+                // (Make sure your FastAPI server is running on port 8000!)
+                const response = await fetch('http://localhost:8000/api/workers');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                // 4. Parse the JSON data
+                const workers = await response.json();
+
+                // 5. Clear the loading message
+                workerContainer.innerHTML = '';
+
+                // 6. Loop through the workers and create a visual card for each one
+                workers.forEach(worker => {
+                    const card = document.createElement('div');
+                    card.className = 'worker-card';
+                    card.innerHTML = `
+
+                        <h1><strong>ID:</strong> the message ${worker.id}</h1>
+                    `;
+                    workerContainer.appendChild(card);
+                });
+
+            } catch (error) {
+                // If the backend isn't running or there's an error, show it here
+                console.error("Failed to fetch workers:", error);
+                workerContainer.innerHTML = `<p class="error">Could not connect to the backend. Is FastAPI running?</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
