@@ -1,52 +1,88 @@
-# Co-op-Serve
+# Git Setup Guide — Co-op-Serve
 
-Welcome to the Co-op-Serve repository. This document is the central hub for our project overview, local setup instructions, and the official Git workflow our team uses to maintain a clean and stable codebase.
-
-## Project Structure
-
-| Folder | Contents |
-|---|---|
-| `frontend/` | Frontend application code (HTML/CSS/JS) |
-| `backend/` | Python backend logic and API infrastructure |
+This guide walks you through installing Git and getting it configured on your machine for the first time. Follow it top to bottom before you touch the project setup steps in the main README.
 
 ---
 
-## 🚀 1. Initial Project Setup (First Time Only)
+## 1. Install Git
 
-Follow these steps to configure your local development environment. You only need to do this once when setting up a new machine.
+1. Download the installer from [git-scm.com/download/win](https://git-scm.com/download/win).
+2. Run the installer. Default options are fine for everyone — just keep clicking **Next** until you reach **Install**, then click **Install**.
+3. Once installed, open **Git Bash** from the Start menu (search "Git Bash"). Use Git Bash for every command below.
 
-### Step 1: Clone the repository
+---
 
-Download the project to your local machine and move into the project folder.
+## 2. Verify the Installation
+
+In Git Bash, run:
+
+```bash
+git --version
+```
+
+You should see something like `git version 2.4x.x`. If you see that, Git is installed correctly.
+
+---
+
+## 3. Set Your Identity
+
+Git needs to know your name and email so it can label your commits. Run these two commands, replacing the placeholders with your own details:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+**Tip:** Use the same email you use for your GitHub account so your commits show up correctly on GitHub.
+
+To double check it worked:
+
+```bash
+git config --global user.name
+git config --global user.email
+```
+
+---
+
+## 4. Set Up GitHub Access
+
+You'll need a GitHub account and a way to authenticate when pushing/pulling code.
+
+1. Create a free account at [github.com](https://github.com) if you don't have one.
+2. Ask a team member to add you as a collaborator on the **Co-op-Serve** repository.
+3. When you clone or push for the first time, GitHub will ask you to log in. The easiest way is:
+   - Install **GitHub CLI**: [cli.github.com](https://cli.github.com)
+   - Run `gh auth login` and follow the prompts.
+   
+   (Alternatively, GitHub Desktop or a personal access token both work — ask the team if you'd rather use one of those.)
+
+---
+
+## 5. Clone the Project
+
+Once Git is installed and your identity is set, move to a folder where you want the project to live, then run:
 
 ```bash
 git clone https://github.com/SpunkyHacker/Co-op-Serve-.git
 cd Co-op-Serve-
 ```
 
-### Step 2: Set up the Python virtual environment
-
-We use a virtual environment to keep our backend dependencies isolated.
-
-```bash
-cd backend
-
-# On Windows:
-python -m venv venv
-venv\Scripts\activate
-
-# On Mac/Linux:
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Step 3: Obtain environment secrets
-
-We never commit sensitive passwords or API keys to GitHub. Reach out to a team member to obtain the local `.env` configuration file, and place it in your root directory before running the application.
+You now have a full local copy of the project.
 
 ---
 
-## 🌿 2. Branch Naming Conventions
+## ✅ Setup Checklist
+
+- [ ] Git installed (`git --version` works)
+- [ ] Name and email configured (`git config --global user.name/user.email`)
+- [ ] GitHub account created and added as a collaborator
+- [ ] Repository cloned successfully
+
+Once everything above is checked off, do the **project setup steps** (virtual environment, `.env` file, etc.) from the main README. After that, you're ready for the day-to-day workflow below.
+
+---
+
+## 🌿 6. Branch Naming Conventions
 
 Never work directly on the `main` branch. Always create a new branch for your work using the following naming structure:
 
@@ -59,7 +95,7 @@ Never work directly on the `main` branch. Always create a new branch for your wo
 
 ---
 
-## 🔄 3. The Core Development Workflow
+## 🔄 7. The Core Development Workflow
 
 ### Phase 1: Sync with the team
 
@@ -129,7 +165,7 @@ When the feature is complete and tested:
 
 ### Phase 7: Sync & clean up
 
-Once your Pull Request is approved and merged into `main` on GitHub, return to your terminal to sync your local environment and delete your old branch.
+Once your Pull Request is approved and merged into `main` on GitHub, return to Git Bash to sync your local environment and delete your old branch.
 
 ```bash
 # Pull the newly updated main branch
@@ -142,7 +178,7 @@ git branch -d feature/your-feature-name
 
 ---
 
-## 🚨 4. Golden Rules of the Repository
+## 🚨 8. Golden Rules of the Repository
 
 - **The `main` branch is sacred.** It should always contain working, deployable code. Never commit directly to it.
 - **Never force push.** If you are stuck in a merge conflict, do not use `git push --force`. Ask the team for help resolving the conflict so we don't overwrite someone else's work.
