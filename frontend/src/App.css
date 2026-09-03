@@ -1,0 +1,14 @@
+/* =========================================
+   GLOBAL APP
+========================================= */
+
+#root {
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  background: #faf9f6;
+  color: #121c28;
+  font-family: "Inter", sans-serif;
+}

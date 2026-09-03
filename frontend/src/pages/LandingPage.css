@@ -1,0 +1,735 @@
+/* =========================================
+   LANDING PAGE
+========================================= */
+
+.landing-page {
+  min-height: 100vh;
+
+  background: #faf9f6;
+
+  color: #121c28;
+
+  font-family: "Inter", sans-serif;
+}
+
+
+/* =========================================
+   NAVBAR
+========================================= */
+
+.landing-navbar {
+  position: fixed;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+
+  z-index: 1000;
+
+  background: rgba(248, 249, 255, 0.92);
+
+  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+
+.landing-navbar-inner {
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding: 16px 32px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+
+/* LOGO */
+
+.landing-logo {
+  color: #005c55;
+
+  font-size: 24px;
+
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+
+/* NAVIGATION */
+
+.landing-nav-links {
+  display: flex;
+
+  align-items: center;
+
+  gap: 32px;
+}
+
+
+.landing-nav-links a {
+  color: #3e4947;
+
+  font-size: 16px;
+
+  text-decoration: none;
+
+  transition: color 0.2s ease;
+}
+
+
+.landing-nav-links a:hover {
+  color: #005c55;
+}
+
+
+/* =========================================
+   HERO
+========================================= */
+
+.landing-hero {
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding: 140px 32px 64px;
+
+  text-align: center;
+}
+
+
+.landing-hero h1 {
+  max-width: 900px;
+
+  margin: 0 auto 16px;
+
+  color: #0f766e;
+
+  font-size: 48px;
+
+  line-height: 1.15;
+
+  font-weight: 700;
+
+  letter-spacing: -1px;
+}
+
+
+.landing-hero-subtitle {
+  max-width: 700px;
+
+  margin: 0 auto 48px;
+
+  color: #3e4947;
+
+  font-size: 18px;
+
+  line-height: 28px;
+}
+
+
+/* =========================================
+   CUSTOMER / WORKER CARDS
+========================================= */
+
+.landing-user-cards {
+  max-width: 900px;
+
+  margin: 0 auto;
+
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 24px;
+}
+
+
+.landing-user-card {
+  min-height: 300px;
+
+  padding: 28px 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #d9e3f4;
+
+  border-radius: 16px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  box-shadow:
+    0 4px 12px rgba(15, 118, 110, 0.05);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+
+.landing-user-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 12px 24px rgba(15, 118, 110, 0.08);
+}
+
+
+/* =========================================
+   ICON
+========================================= */
+
+.landing-icon-circle {
+  width: 64px;
+
+  height: 64px;
+
+  margin-bottom: 12px;
+
+  border-radius: 50%;
+
+  background: #eef4ff;
+
+  color: #0f766e;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  transition: transform 0.25s ease;
+}
+
+
+.landing-user-card:hover .landing-icon-circle {
+  transform: scale(1.08);
+}
+
+
+.landing-icon-circle .material-symbols-outlined {
+  font-size: 32px;
+}
+
+
+/* =========================================
+   CARD TEXT
+========================================= */
+
+.landing-card-label {
+  margin-bottom: 6px;
+
+  color: #005c55;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  letter-spacing: 1.5px;
+}
+
+
+.landing-user-card h2 {
+  margin: 0 0 8px;
+
+  font-size: 24px;
+
+  font-weight: 600;
+}
+
+
+.landing-user-card p {
+  margin: 0 0 24px;
+
+  color: #3e4947;
+
+  font-size: 16px;
+
+  line-height: 24px;
+}
+
+
+/* =========================================
+   BUTTONS
+========================================= */
+
+.landing-primary-button,
+.landing-secondary-button {
+  width: 100%;
+
+  margin-top: auto;
+
+  padding: 11px 24px;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+/* PRIMARY */
+
+.landing-primary-button {
+  border: 2px solid #0f766e;
+
+  background: #0f766e;
+
+  color: #ffffff;
+}
+
+
+.landing-primary-button:hover {
+  background: #005c55;
+
+  transform: translateY(-1px);
+}
+
+
+/* SECONDARY */
+
+.landing-secondary-button {
+  border: 2px solid #0f766e;
+
+  background: #ffffff;
+
+  color: #0f766e;
+}
+
+
+.landing-secondary-button:hover {
+  background: #eef4ff;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================
+   HOW IT WORKS
+========================================= */
+
+.landing-how-section {
+  padding: 64px 32px;
+
+  background: #ffffff;
+
+  border-top: 1px solid #d9e3f4;
+
+  border-bottom: 1px solid #d9e3f4;
+}
+
+
+.landing-section-container {
+  max-width: 1280px;
+
+  margin: 0 auto;
+}
+
+
+.landing-how-section h2,
+.landing-services-section h2 {
+  margin: 0 0 48px;
+
+  color: #0f766e;
+
+  text-align: center;
+
+  font-size: 32px;
+
+  line-height: 40px;
+
+  font-weight: 600;
+}
+
+
+/* =========================================
+   STEPS
+========================================= */
+
+.landing-steps {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 24px;
+}
+
+
+.landing-step {
+  flex: 1;
+
+  text-align: center;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+}
+
+
+.landing-step-icon {
+  width: 64px;
+
+  height: 64px;
+
+  margin-bottom: 12px;
+
+  border-radius: 50%;
+
+  background: #e5eeff;
+
+  color: #005c55;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+
+.landing-step-icon .material-symbols-outlined {
+  font-size: 32px;
+}
+
+
+.landing-step h3 {
+  margin: 0 0 8px;
+
+  font-size: 24px;
+
+  font-weight: 600;
+}
+
+
+.landing-step p {
+  max-width: 280px;
+
+  margin: 0;
+
+  color: #3e4947;
+
+  line-height: 24px;
+}
+
+
+.landing-step-line {
+  flex: 1;
+
+  height: 1px;
+
+  margin-top: 32px;
+
+  background: #bdc9c6;
+}
+
+
+/* =========================================
+   TRUST SECTION
+========================================= */
+
+.landing-trust-section {
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding: 48px 32px;
+
+  text-align: center;
+}
+
+
+.landing-trust-title {
+  margin: 0 0 20px;
+
+  color: #6e7977;
+
+  font-size: 14px;
+
+  font-weight: 500;
+
+  letter-spacing: 1.5px;
+}
+
+
+.landing-trust-items {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 64px;
+
+  opacity: 0.7;
+}
+
+
+.landing-trust-items span {
+  color: #006a63;
+
+  font-size: 20px;
+
+  font-weight: 700;
+}
+
+
+/* =========================================
+   SERVICES
+========================================= */
+
+.landing-services-section {
+  padding: 64px 32px;
+
+  background: #ffffff;
+}
+
+
+.landing-services-grid {
+  display: grid;
+
+  grid-template-columns: repeat(5, 1fr);
+
+  gap: 12px;
+}
+
+
+.landing-service-card {
+  padding: 20px 12px;
+
+  background: #ffffff;
+
+  border-radius: 16px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 12px rgba(15, 118, 110, 0.05);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.landing-service-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 12px 24px rgba(15, 118, 110, 0.08);
+}
+
+
+.landing-service-card .material-symbols-outlined {
+  margin-bottom: 8px;
+
+  color: #005c55;
+
+  font-size: 40px;
+}
+
+
+.landing-service-card span:last-child {
+  font-size: 14px;
+
+  font-weight: 500;
+}
+
+
+/* =========================================
+   FOOTER
+========================================= */
+
+.landing-footer {
+  padding: 48px 32px;
+
+  background: #d9e3f4;
+
+  text-align: center;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 16px;
+}
+
+
+.landing-footer-logo {
+  color: #005c55;
+
+  font-size: 24px;
+
+  font-weight: 700;
+}
+
+
+.landing-copyright {
+  margin: 0;
+
+  color: #3e4947;
+
+  font-size: 12px;
+}
+
+
+/* =========================================
+   TABLET / MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .landing-navbar-inner {
+    padding: 16px;
+  }
+
+
+  .landing-nav-links {
+    display: none;
+  }
+
+
+  .landing-hero {
+    padding: 120px 16px 48px;
+  }
+
+
+  .landing-hero h1 {
+    font-size: 36px;
+  }
+
+
+  .landing-hero-subtitle {
+    font-size: 16px;
+
+    line-height: 24px;
+  }
+
+
+  .landing-user-cards {
+    grid-template-columns: 1fr;
+  }
+
+
+  .landing-how-section {
+    padding: 48px 16px;
+  }
+
+
+  .landing-how-section h2,
+  .landing-services-section h2 {
+    font-size: 28px;
+
+    line-height: 36px;
+  }
+
+
+  .landing-steps {
+    flex-direction: column;
+
+    align-items: center;
+  }
+
+
+  .landing-step-line {
+    display: none;
+  }
+
+
+  .landing-trust-section {
+    padding: 48px 16px;
+  }
+
+
+  .landing-trust-items {
+    gap: 24px;
+  }
+
+
+  .landing-services-section {
+    padding: 48px 16px;
+  }
+
+
+  .landing-services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+
+  .landing-footer {
+    padding: 40px 16px;
+  }
+}
+
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 480px) {
+
+  .landing-hero h1 {
+    font-size: 30px;
+  }
+
+
+  .landing-user-card {
+    padding: 24px 20px;
+  }
+
+
+  .landing-services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+
+  .landing-trust-items {
+    flex-direction: column;
+
+    gap: 16px;
+  }
+
+}
