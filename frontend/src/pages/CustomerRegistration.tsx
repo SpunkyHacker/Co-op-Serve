@@ -30,7 +30,7 @@ function CustomerRegistration() {
 
   // Demo OTP
   // Replace this with backend OTP verification later.
-  const DEMO_OTP = "123456";
+  //DEMO_OTP = "123456";
 
   // =========================================
   // PASSWORD VISIBILITY
@@ -66,63 +66,88 @@ function CustomerRegistration() {
   // SEND OTP
   // =========================================
 
-  const handleSendOTP = () => {
-    setEmailError("");
-    setOtpError("");
+  const handleSendOTP = async () => {
+  setEmailError("");
+  setOtpError("");
 
-    if (!email.trim()) {
-      setEmailError("Please enter your email address.");
-      return;
+  if (!email.trim()) {
+    setEmailError("Please enter your email address.");
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    setEmailError("Please enter a valid email address.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/request-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: email, role: "customer" }),
+    });
+    
+    const data = await response.json();
+
+    if (data.success) {
+      setEmailVerified(false);
+      setOtp("");
+      setOtpSent(true);
+    } else {
+      setEmailError(data.message || "Failed to send OTP.");
     }
-
-    if (!isValidEmail(email)) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
-
-    // Reset verification if email is changed
-    setEmailVerified(false);
-    setOtp("");
-    setOtpSent(true);
-
-    // Demo behaviour
-    console.log("OTP sent to:", email);
-    console.log("Demo OTP:", DEMO_OTP);
-  };
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    setEmailError("Network error. Please make sure the backend is running.");
+  }
+};
 
   // =========================================
   // VERIFY OTP
   // =========================================
 
-  const handleVerifyOTP = () => {
-    setOtpError("");
+ const handleVerifyOTP = async () => {
+  setOtpError("");
 
-    if (!/^\d{6}$/.test(otp)) {
-      setOtpError("Please enter a valid 6-digit OTP.");
-      return;
+  if (!/^\d{6}$/.test(otp)) {
+    setOtpError("Please enter a valid 6-digit OTP.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: email, otp: otp, role: "customer" }),
+    });
+    
+    const data = await response.json();
+
+    if (data.success) {
+      setEmailVerified(true);
+      setOtpError("");
+      
+      // The backend returns a JWT upon successful verification. 
+      // If you want to log them in immediately upon account creation, 
+      // you can store data.token in localStorage here.
+    } else {
+      setOtpError(data.message || "Incorrect OTP. Please try again.");
     }
-
-    if (otp !== DEMO_OTP) {
-      setOtpError("Incorrect OTP. Please try again.");
-      return;
-    }
-
-    setEmailVerified(true);
-    setOtpError("");
-  };
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    setOtpError("Network error while verifying OTP.");
+  }
+};
 
   // =========================================
   // RESEND OTP
   // =========================================
 
   const handleResendOTP = () => {
-    setOtp("");
-    setOtpError("");
-
-    console.log("OTP resent to:", email);
-    console.log("Demo OTP:", DEMO_OTP);
-  };
-
+  setOtp("");
+  setOtpError("");
+  handleSendOTP();
+};
   // =========================================
   // CREATE ACCOUNT VALIDATION
   // =========================================
