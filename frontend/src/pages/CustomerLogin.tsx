@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./CustomerLogin.css";
+import { Link } from "react-router-dom";
 
 function CustomerLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -325,17 +326,21 @@ function CustomerLogin() {
 
 
 
-              {/* Registration */}
+              {/* =========================================
+    REGISTRATION
+========================================= */}
 
-              <p className="customer-login-register">
+<p className="customer-login-register">
 
-                New customer?
+  <span>
+    New customer?
+  </span>
 
-                <a href="#">
-                  Create an account
-                </a>
+  <Link to="/customer-registration">
+    Create an account
+  </Link>
 
-              </p>
+</p>
 
 
 
