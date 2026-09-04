@@ -4,6 +4,7 @@ import CustomerLogin from "./pages/CustomerLogin";
 import WorkerLogin from "./pages/WorkerLogin";
 import LandingPage from "./pages/LandingPage";
 import CustomerRegistration from "./pages/CustomerRegistration";
+import CustomerDashboard from "./pages/CustomerDashboard";
 
 import "./App.css";
 
@@ -37,6 +38,9 @@ function App() {
     return <WorkerLogin />;
   }
 
+  if(path === "/customer-dashboard"){
+    return <CustomerDashboard/>
+  }
   // =========================================
   // LANDING PAGE
   // =========================================
