@@ -118,13 +118,15 @@ function CustomerDashboard() {
   };
 
   // Mock data for services
+// Mock data for services mapped to Database Categories
   const services = [
-    { id: 1, name: "Electrician", icon: "⚡", desc: "Wiring, repairs, and installations." },
-    { id: 2, name: "Plumber", icon: "💧", desc: "Pipe leaks, fittings, and bathroom setups." },
-    { id: 3, name: "Carpenter", icon: "🪚", desc: "Furniture repair, doors, and custom woodwork." },
-    { id: 4, name: "Cleaner", icon: "🧹", desc: "Deep cleaning for homes and apartments." },
-    { id: 5, name: "Painter", icon: "🎨", desc: "Interior and exterior wall painting." },
-    { id: 6, name: "Appliance Repair", icon: "🔧", desc: "AC, Fridge, and Washing Machine fixing." },
+    { id: 1, name: "Electrician", dbCategory: "Electrical", icon: "⚡", desc: "Wiring, repairs, and installations." },
+    { id: 2, name: "Plumber", dbCategory: "Plumbing", icon: "💧", desc: "Pipe leaks, fittings, and bathroom setups." },
+    { id: 3, name: "Carpenter", dbCategory: "Carpentry", icon: "🪚", desc: "Furniture repair, doors, and custom woodwork." },
+    { id: 4, name: "Cleaner", dbCategory: "Cleaning", icon: "🧹", desc: "Deep cleaning for homes and apartments." },
+    { id: 5, name: "Painter", dbCategory: "Painting", icon: "🎨", desc: "Interior and exterior wall painting." },
+    { id: 6, name: "Appliance Repair", dbCategory: "Appliance Repair", icon: "🔧", desc: "AC, Fridge, and Washing Machine fixing." },
+    { id: 7, name: "Gardener", dbCategory: "Gardening", icon: "🌱", desc: "Lawn care, planting, and landscaping." },
   ];
 
   const filteredServices = services.filter(service => 
@@ -201,7 +203,7 @@ function CustomerDashboard() {
                     <div className="service-icon">{service.icon}</div>
                     <h3>{service.name}</h3>
                     <p>{service.desc}</p>
-                    <button className="book-now-btn" onClick={() => handleFindWorker(service.name)}>
+                    <button className="book-now-btn" onClick={() => handleFindWorker(service.dbCategory)}>
                       Find a {service.name}
                     </button>
                   </div>
