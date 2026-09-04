@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
+import { useEffect } from "react";
 import "./CustomerRegistration.css";
 
 function CustomerRegistration() {
@@ -21,16 +23,34 @@ function CustomerRegistration() {
   // OTP STATES
   // =========================================
 
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [emailVerified, setEmailVerified] = useState(false);
-
+ //const [otpSent, setOtpSent] = useState(false);
+  //const [otp, setOtp] = useState("");
+  //const [emailVerified, setEmailVerified] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [otpError, setOtpError] = useState("");
+  //const [otpError, setOtpError] = useState("");
 
   // Demo OTP
   // Replace this with backend OTP verification later.
   //DEMO_OTP = "123456";
+  // =========================================
+// POPUP & TIMER STATES
+// =========================================
+const [showPopup, setShowPopup] = useState(false);
+const [resendTimer, setResendTimer] = useState(0);
+
+// Timer countdown logic
+useEffect(() => {
+  let interval: ReturnType<typeof setInterval>;
+  
+  if (resendTimer > 0) {
+    interval = setInterval(() => {
+      setResendTimer((prev) => prev - 1);
+    }, 1000);
+  }
+  
+  return () => clearInterval(interval);
+}, [resendTimer]);
 
   // =========================================
   // PASSWORD VISIBILITY
@@ -62,92 +82,73 @@ function CustomerRegistration() {
 
   const isValidPassword = password.length >= 8;
 
-  // =========================================
-  // SEND OTP
-  // =========================================
+//   // =========================================
+//   // SEND OTP
+//   // =========================================
+// const handleSendOTP = async () => {
+//   setEmailError("");
+//   setOtpError("");
 
-  const handleSendOTP = async () => {
-  setEmailError("");
-  setOtpError("");
+//   if (!email.trim()) {
+//     setEmailError("Please enter your email address.");
+//     return;
+//   }
 
-  if (!email.trim()) {
-    setEmailError("Please enter your email address.");
-    return;
-  }
+//   if (!isValidEmail(email)) {
+//     setEmailError("Please enter a valid email address.");
+//     return;
+//   }
 
-  if (!isValidEmail(email)) {
-    setEmailError("Please enter a valid email address.");
-    return;
-  }
+//   const { error } = await supabase.auth.signInWithOtp({
+//     email: email,
+//     options: {
+//       // Prevents sending a magic link, forces a 6-digit OTP
+//       shouldCreateUser: true, 
+//     },
+//   });
 
-  try {
-    const response = await fetch("http://localhost:8000/api/auth/request-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contact: email, role: "customer" }),
-    });
-    
-    const data = await response.json();
+//   if (error) {
+//     setEmailError(error.message);
+//   } else {
+//     setEmailVerified(false);
+//     setOtp("");
+//     setOtpSent(true);
+//   }
+// };
 
-    if (data.success) {
-      setEmailVerified(false);
-      setOtp("");
-      setOtpSent(true);
-    } else {
-      setEmailError(data.message || "Failed to send OTP.");
-    }
-  } catch (error) {
-    console.error("Error sending OTP:", error);
-    setEmailError("Network error. Please make sure the backend is running.");
-  }
-};
+//   // =========================================
+//   // VERIFY OTP
+//   // =========================================
+// const handleVerifyOTP = async () => {
+//   setOtpError("");
 
-  // =========================================
-  // VERIFY OTP
-  // =========================================
+//   if (!/^\d{6}$/.test(otp)) {
+//     setOtpError("Please enter a valid 6-digit OTP.");
+//     return;
+//   }
 
- const handleVerifyOTP = async () => {
-  setOtpError("");
+//   const { data, error } = await supabase.auth.verifyOtp({
+//     email: email,
+//     token: otp,
+//     type: "email",
+//   });
 
-  if (!/^\d{6}$/.test(otp)) {
-    setOtpError("Please enter a valid 6-digit OTP.");
-    return;
-  }
+//   if (error) {
+//     setOtpError(error.message);
+//   } else if (data.session) {
+//     setEmailVerified(true);
+//     setOtpError("");
+//   }
+// };
+//   // =========================================
+//   // RESEND OTP
+//   // =========================================
 
-  try {
-    const response = await fetch("http://localhost:8000/api/auth/verify-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contact: email, otp: otp, role: "customer" }),
-    });
-    
-    const data = await response.json();
-
-    if (data.success) {
-      setEmailVerified(true);
-      setOtpError("");
-      
-      // The backend returns a JWT upon successful verification. 
-      // If you want to log them in immediately upon account creation, 
-      // you can store data.token in localStorage here.
-    } else {
-      setOtpError(data.message || "Incorrect OTP. Please try again.");
-    }
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    setOtpError("Network error while verifying OTP.");
-  }
-};
-
-  // =========================================
-  // RESEND OTP
-  // =========================================
-
-  const handleResendOTP = () => {
-  setOtp("");
-  setOtpError("");
-  handleSendOTP();
-};
+//   const handleResendOTP = () => {
+//   setOtp("");
+//   setOtpError("");
+//   handleSendOTP();
+// };
   // =========================================
   // CREATE ACCOUNT VALIDATION
   // =========================================
@@ -162,43 +163,57 @@ function CustomerRegistration() {
     lastName.trim() !== "" &&
     isValidPhone(phone) &&
     isValidEmail(email) &&
-    emailVerified &&
     isValidPassword &&
     passwordsMatch;
 
   // =========================================
   // CREATE ACCOUNT
   // =========================================
+const handleCreateAccount = async (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
+  setEmailError("");
 
-  const handleCreateAccount = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+  if (!canCreateAccount) return;
 
-    if (!emailVerified) {
-      setEmailError(
-        "Please verify your email before creating your account."
-      );
-      return;
-    }
+  const { error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      emailRedirectTo: "http://localhost:5173/customer-login", 
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+        role: "customer",
+      },
+    },
+  });
 
-    if (!canCreateAccount) {
-      return;
-    }
+  if (error) {
+    setEmailError(error.message);
+  } else {
+    setShowPopup(true);
+    setResendTimer(60); // Start 60-second cooldown
+  }
+};
 
-    // Registration backend will be connected here later.
-    console.log("Customer account created:", {
-      firstName,
-      lastName,
-      phone,
-      email,
-      password,
-    });
+const handleResendEmail = async () => {
+  if (resendTimer > 0) return;
 
-    // For now, redirect to customer login
-    navigate("/customer-login");
-  };
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email,
+    options: {
+      emailRedirectTo: "http://localhost:5173/customer-login",
+    },
+  });
 
+  if (error) {
+    setEmailError(error.message);
+  } else {
+    setResendTimer(60); // Restart cooldown
+  }
+};
   return (
     <div className="customer-registration-page">
 
@@ -381,139 +396,30 @@ function CustomerRegistration() {
             {/* =====================================
                 EMAIL + VERIFY BUTTON
             ===================================== */}
-
             <div className="customer-form-field">
-
               <label htmlFor="customer-email">
                 Email Address <span>*</span>
               </label>
 
-              <div className="customer-email-row">
-
-                <input
-                  id="customer-email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  disabled={emailVerified}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    setEmailError("");
-                    setEmailVerified(false);
-                    setOtpSent(false);
-                  }}
-                  required
-                />
-
-                <button
-                  type="button"
-                  className={
-                    emailVerified
-                      ? "customer-verify-button verified"
-                      : "customer-verify-button"
-                  }
-                  onClick={
-                    emailVerified
-                      ? undefined
-                      : handleSendOTP
-                  }
-                  disabled={emailVerified}
-                >
-                  {emailVerified
-                    ? "Verified ✓"
-                    : "Verify OTP"}
-                </button>
-
-              </div>
-
+              <input
+                id="customer-email"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setEmailError("");
+                }}
+                required
+              />
 
               {/* EMAIL ERROR */}
-
               {emailError && (
                 <small className="customer-field-error">
                   {emailError}
                 </small>
               )}
-
-
-              {/* =================================
-                  OTP AREA
-              ================================= */}
-
-              {otpSent && !emailVerified && (
-                <div className="customer-otp-box">
-
-                  <div className="customer-otp-title">
-                    Verify your email
-                  </div>
-
-                  <p>
-                    We've sent a 6-digit verification code
-                    to your email address.
-                  </p>
-
-                  <label htmlFor="customer-otp">
-                    Enter OTP
-                  </label>
-
-                  <div className="customer-otp-row">
-
-                    <input
-                      id="customer-otp"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="------"
-                      value={otp}
-                      onChange={(event) => {
-                        const value =
-                          event.target.value.replace(/\D/g, "");
-
-                        setOtp(value);
-                        setOtpError("");
-                      }}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={handleVerifyOTP}
-                      className="customer-otp-verify-button"
-                    >
-                      Verify OTP
-                    </button>
-
-                  </div>
-
-
-                  {otpError && (
-                    <small className="customer-field-error">
-                      {otpError}
-                    </small>
-                  )}
-
-
-                  <button
-                    type="button"
-                    className="customer-resend-button"
-                    onClick={handleResendOTP}
-                  >
-                    Resend OTP
-                  </button>
-
-                </div>
-              )}
-
-
-              {/* VERIFIED MESSAGE */}
-
-              {emailVerified && (
-                <div className="customer-email-verified">
-                  Email Verified ✓
-                </div>
-              )}
-
             </div>
-
 
             {/* =====================================
                 PASSWORD
@@ -660,7 +566,46 @@ function CustomerRegistration() {
       <footer className="customer-registration-footer">
         © 2026 Co-op Serve • A Worker-Owned Cooperative Enterprise.
       </footer>
+        {/* =========================================
+          VERIFICATION POPUP MODAL
+      ========================================= */}
+      {showPopup && (
+        <div className="customer-popup-overlay">
+          <div className="customer-popup-box">
+            <h2>Check your mail!</h2>
+            <p>
+              We've sent a verification link to <strong>{email}</strong>. 
+              Please click the link to verify your account.
+            </p>
 
+            {emailError && (
+              <small className="customer-field-error" style={{ display: 'block', marginBottom: '1rem' }}>
+                {emailError}
+              </small>
+            )}
+
+            <div className="customer-popup-actions">
+              <button 
+                className="customer-resend-button" 
+                onClick={handleResendEmail}
+                disabled={resendTimer > 0}
+              >
+                {resendTimer > 0 ? `Resend Email in ${resendTimer}s` : "Resend Email"}
+              </button>
+              
+              <button 
+                className="customer-change-email-button"
+                onClick={() => {
+                  setShowPopup(false);
+                  setEmailError("");
+                }}
+              >
+                Change Email Address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
