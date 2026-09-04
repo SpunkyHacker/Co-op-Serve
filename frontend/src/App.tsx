@@ -5,6 +5,8 @@ import WorkerLogin from "./pages/WorkerLogin";
 import LandingPage from "./pages/LandingPage";
 import CustomerRegistration from "./pages/CustomerRegistration";
 import CustomerDashboard from "./pages/CustomerDashboard";
+import WorkerDashboard from "./pages/WorkerDashboard";
+import WorkerRegistration from "./pages/WorkerRegistration";
 
 import "./App.css";
 
@@ -29,6 +31,13 @@ function App() {
   if (path === "/customer-registration") {
     return <CustomerRegistration />;
   }
+  // =========================================
+  // Worker REGISTRATION
+  // =========================================
+
+  if (path === "/worker-registration") {
+    return <WorkerRegistration />;
+  }
 
   // =========================================
   // WORKER LOGIN
@@ -40,6 +49,9 @@ function App() {
 
   if(path === "/customer-dashboard"){
     return <CustomerDashboard/>
+  }
+    if(path === "/worker-dashboard"){
+    return <WorkerDashboard/>
   }
   // =========================================
   // LANDING PAGE
