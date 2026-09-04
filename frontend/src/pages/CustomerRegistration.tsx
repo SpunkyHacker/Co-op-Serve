@@ -413,12 +413,7 @@ const handleResendEmail = async () => {
                 required
               />
 
-              {/* EMAIL ERROR */}
-              {emailError && (
-                <small className="customer-field-error">
-                  {emailError}
-                </small>
-              )}
+
             </div>
 
             {/* =====================================
@@ -521,7 +516,12 @@ const handleResendEmail = async () => {
                 )}
 
             </div>
-
+                              {/* EMAIL ERROR */}
+              {emailError && (
+                <small className="customer-field-error">
+                  {emailError}
+                </small>
+              )}
 
             {/* =====================================
                 CREATE ACCOUNT
