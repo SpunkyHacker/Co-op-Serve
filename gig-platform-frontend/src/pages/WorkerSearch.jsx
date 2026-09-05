@@ -78,9 +78,8 @@ export default function WorkerSearch() {
       if (data.status === 'success') {
         alert(`Success! Invites sent to workers. Group ID: ${data.group_id}`);
         setSelectedWorkers([]);
-        navigate('/booking');
-      } else {
-        alert("Backend rejected the request: " + JSON.stringify(data));
+        // Pass the group ID directly into the routing state
+        navigate('/booking', { state: { groupId: data.group_id } });
       }
     } catch (err) {
       console.error("Booking error:", err);

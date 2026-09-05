@@ -345,18 +345,36 @@ def customer_track_booking(booking_id: str):
 
 @app.get("/api/bookings/group/{group_id}/tracking")
 def customer_track_group(group_id: str):
-    """Use this instead of the single-booking tracking endpoint whenever a request
-    went out to more than one worker - it resolves to whichever booking in the
-    group actually became active, since the customer can't know that in advance."""
-    res = supabase.table("bookings").select("id, status, worker_id").eq("group_id", group_id).execute()
+    # Fetch all bookings in the group, along with the worker's name
+    res = supabase.table("bookings").select("id, status, worker_id, expires_at, workers(users(name))").eq("group_id", group_id).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Booking group not found")
     rows = res.data
 
+    details = []
+    for r in rows:
+        # Auto-expire if time ran out
+        if r["status"] == "pending" and parse_ts(r["expires_at"]) < utcnow():
+            supabase.table("bookings").update({"status": "expired"}).eq("id", r["id"]).execute()
+            r["status"] = "expired"
+        
+        # Safely extract worker name
+        worker_data = r.get("workers") or {}
+        user_data = worker_data.get("users") or {}
+        worker_name = user_data.get("name") or "Worker"
+
+        details.append({
+            "booking_id": r["id"],
+            "worker_name": worker_name,
+            "status": r["status"],
+            "expires_at": r["expires_at"]
+        })
+
     active = next((r for r in rows if r["status"] not in INACTIVE_STATUSES), None)
+
     if active is None:
         if all(r["status"] in ("rejected", "cancelled", "expired") for r in rows):
-            return {"status": "no_workers_available", "booking_id": None, "worker_live_lat": None, "worker_live_lng": None}
-        return {"status": "pending", "booking_id": None, "worker_live_lat": None, "worker_live_lng": None}
+            return {"status": "no_workers_available", "details": details}
+        return {"status": "pending", "details": details}
 
     worker_res = supabase.table("workers").select("location_lat, location_lng").eq("id", active["worker_id"]).execute()
     loc = worker_res.data[0] if worker_res.data else {}
@@ -365,8 +383,8 @@ def customer_track_group(group_id: str):
         "booking_id": active["id"],
         "worker_live_lat": loc.get("location_lat"),
         "worker_live_lng": loc.get("location_lng"),
+        "details": details
     }
-
 @app.put("/api/bookings/status")
 def update_booking_status(data: BookingStatusUpdate):
     supabase.table("bookings").update({"status": data.status}).eq("id", data.booking_id).execute()
