@@ -385,8 +385,32 @@ def customer_track_group(group_id: str):
         "worker_live_lng": loc.get("location_lng"),
         "details": details
     }
+from pydantic import BaseModel
+from fastapi import HTTPException
+
+class StatusUpdate(BaseModel):
+    booking_id: str
+    status: str
+
 @app.put("/api/bookings/status")
-def update_booking_status(payload: dict): # Or whatever Pydantic model you are using
+def update_booking_status(payload: StatusUpdate):
+    try:
+        # 1. Update the booking status in Supabase
+        res = supabase.table("bookings").update({"status": payload.status}).eq("id", payload.booking_id).execute()
+        
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        # 2. Free up the worker if the job is finished or cancelled
+        if payload.status in ["completed_pending_payment", "work_done", "cancelled", "completed"]:
+            worker_id = res.data[0].get("worker_id")
+            if worker_id:
+                supabase.table("workers").update({"is_available": True}).eq("id", worker_id).execute()
+
+        return {"status": "success", "data": res.data[0]}
+    except Exception as e:
+        print(f"CRITICAL STATUS UPDATE ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) # Or whatever Pydantic model you are using
     booking_id = payload.get("booking_id")
     new_status = payload.get("status")
 
