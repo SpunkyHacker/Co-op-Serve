@@ -74,9 +74,6 @@ function WorkerDashboard() {
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState("");
 
-  const [selectedJob, setSelectedJob] =
-    useState<Job | null>(null);
-
   const [respondingId, setRespondingId] =
     useState<string | null>(null);
 
@@ -127,7 +124,7 @@ function WorkerDashboard() {
   // ==========================================================
 
   const worker =
-    workerData?.workers?.[0];
+    workerData?.workers;
 
   const workerName =
     workerData?.name || "Worker";
@@ -289,7 +286,7 @@ function WorkerDashboard() {
           status,
           customer_lat,
           customer_lng,
-          customers(name)
+          customers(users(name))
           `
         )
         .eq(
@@ -339,7 +336,7 @@ function WorkerDashboard() {
           price,
           status,
           customer_id,
-          customers(name)
+          customers(users(name))
           `
         )
         .eq(
@@ -498,7 +495,7 @@ function WorkerDashboard() {
           }
 
           const currentWorker =
-            data.workers?.[0];
+            data.workers;
 
           if (!currentWorker) {
             alert(
@@ -817,15 +814,12 @@ function WorkerDashboard() {
             return {
               ...current,
 
-              workers:
-                current.workers?.map(
-                  (item: any) => ({
-                    ...item,
-
-                    is_available:
-                      available,
-                  })
-                ),
+              workers: current.workers
+                ? {
+                    ...current.workers,
+                    is_available: available,
+                  }
+                : current.workers,
             };
           }
         );
@@ -1064,31 +1058,29 @@ function WorkerDashboard() {
                 editForm.phone.trim(),
 
               workers:
-                current.workers?.map(
-                  (item: any) =>
-                    item.id === workerId
-                      ? {
-                          ...item,
+                current.workers &&
+                current.workers.id === workerId
+                  ? {
+                      ...current.workers,
 
-                          skill_category:
-                            editForm.skill_category.trim(),
+                      skill_category:
+                        editForm.skill_category.trim(),
 
-                          hourly_rate:
-                            Number(
-                              editForm.hourly_rate
-                            ),
+                      hourly_rate:
+                        Number(
+                          editForm.hourly_rate
+                        ),
 
-                          upi_id:
-                            editForm.upi_id.trim() ||
-                            null,
+                      upi_id:
+                        editForm.upi_id.trim() ||
+                        null,
 
-                          service_radius_km:
-                            Number(
-                              editForm.service_radius_km
-                            ),
-                        }
-                      : item
-                ),
+                      service_radius_km:
+                        Number(
+                          editForm.service_radius_km
+                        ),
+                    }
+                  : current.workers,
             };
           }
         );
@@ -1187,10 +1179,6 @@ function WorkerDashboard() {
             )
         );
 
-        setSelectedJob(
-          null
-        );
-
         if (
           action === "accept"
         ) {
@@ -1211,15 +1199,12 @@ function WorkerDashboard() {
               return {
                 ...current,
 
-                workers:
-                  current.workers?.map(
-                    (item: any) => ({
-                      ...item,
-
-                      is_available:
-                        false,
-                    })
-                  ),
+                workers: current.workers
+                  ? {
+                      ...current.workers,
+                      is_available: false,
+                    }
+                  : current.workers,
               };
             }
           );
@@ -1593,20 +1578,7 @@ function WorkerDashboard() {
 
           </div>
 
-          <button
-            className="worker-notification-btn"
-            title="Notifications"
-          >
-            🔔
-
-            {jobs.length >
-              0 && (
-              <span className="notification-badge">
-                {jobs.length}
-              </span>
-            )}
-
-          </button>
+         
 
         </header>
 
@@ -1674,9 +1646,9 @@ function WorkerDashboard() {
               </div>
             )}
 
-            <section className="worker-map-card">
+            <section className="nearby-jobs-section">
 
-              <div className="section-heading">
+              <div className="jobs-heading">
 
                 <div>
 
@@ -1685,8 +1657,10 @@ function WorkerDashboard() {
                   </h2>
 
                   <p>
-                    {location
-                      ? `Matched within your ${serviceRadius} km service radius`
+                    {jobsLoading
+                      ? "Checking for nearby jobs..."
+                      : location
+                      ? `${jobs.length} matching jobs within your ${serviceRadius} km service radius`
                       : "Waiting for your location"}
                   </p>
 
@@ -1698,131 +1672,89 @@ function WorkerDashboard() {
 
               </div>
 
-              <div className="worker-map-placeholder">
-
-                <div className="map-road road-one"></div>
-                <div className="map-road road-two"></div>
-                <div className="map-road road-three"></div>
-
-                <div className="map-label label-one">
-                  Nearby area
-                </div>
-
-                <div className="map-label label-two">
-                  Service area
-                </div>
-
-                <div className="map-label label-three">
-                  Local jobs
-                </div>
-
-                <div className="worker-map-you">
-                  <span></span>
-                  <strong>
-                    You
-                  </strong>
-                </div>
-
-                <div className="map-zoom-controls">
-                  <button>
-                    +
-                  </button>
-
-                  <button>
-                    −
-                  </button>
-                </div>
-
-              </div>
-
-            </section>
-
-            <section className="nearby-jobs-section">
-
-              <div className="jobs-heading">
-
-                <h2>
-                  Available jobs for you
-                </h2>
-
-                <p>
-                  {jobsLoading
-                    ? "Checking for nearby jobs..."
-                    : `${jobs.length} matching jobs nearby`}
-                </p>
-
-              </div>
-
               {jobs.length >
               0 ? (
-                <div className="worker-jobs-grid">
+                <div className="worker-jobs-list">
 
                   {jobs.map(
                     (job) => (
                       <div
-                        className="minimalist-card"
+                        className="job-request-card"
                         key={
                           job.booking_id
                         }
-                        onClick={() =>
-                          setSelectedJob(
-                            job
-                          )
-                        }
                       >
 
-                        <div>
+                        <h3 className="job-request-title">
+                          {job.title}
+                        </h3>
 
-                          <span className="job-distance">
-                            {job.distance_km} km
-                          </span>
+                        <div className="job-request-details">
 
-                          <h3>
-                            {job.title}
-                          </h3>
-
-                          <p className="job-description">
-                            Request from{" "}
-                            {
-                              job.customer
-                            }
-                            . Estimated{" "}
-                            {
-                              job.eta_mins
-                            }{" "}
-                            min away.
-                          </p>
-
-                        </div>
-
-                        <div className="job-card-footer">
-
-                          <div>
+                          <div className="job-detail-box">
                             <small>
-                              Payment
+                              Customer
                             </small>
-
                             <strong>
-                              ₹
-                              {
-                                job.price
-                              }
+                              {job.customer}
                             </strong>
                           </div>
 
+                          <div className="job-detail-box">
+                            <small>
+                              Price
+                            </small>
+                            <strong>
+                              ₹{job.price}
+                            </strong>
+                          </div>
+
+                          <div className="job-detail-box">
+                            <small>
+                              Distance
+                            </small>
+                            <strong>
+                              {job.distance_km} km
+                            </strong>
+                          </div>
+
+                        </div>
+
+                        <div className="job-request-actions">
+
+                          <button
+                            className="action-btn secondary"
+                            disabled={
+                              respondingId ===
+                              job.booking_id
+                            }
+                            onClick={() =>
+                              respondToJob(
+                                job,
+                                "reject"
+                              )
+                            }
+                          >
+                            Reject
+                          </button>
+
                           <button
                             className="action-btn primary"
-                            onClick={(
-                              event
-                            ) => {
-                              event.stopPropagation();
-
-                              setSelectedJob(
-                                job
-                              );
-                            }}
+                            disabled={
+                              respondingId ===
+                              job.booking_id
+                            }
+                            onClick={() =>
+                              respondToJob(
+                                job,
+                                "accept"
+                              )
+                            }
                           >
-                            View
+                            {respondingId ===
+                            job.booking_id
+                              ? "Processing..."
+                              : "Approve"}
                           </button>
 
                         </div>
@@ -1916,6 +1848,7 @@ function WorkerDashboard() {
 
                             <span>
                               {job.customers
+                                ?.users
                                 ?.name ||
                                 "Customer"}
                             </span>
@@ -1988,6 +1921,7 @@ function WorkerDashboard() {
 
                     <strong>
                       {activeJob.customers
+                        ?.users
                         ?.name ||
                         "Customer"}
                     </strong>
@@ -2159,6 +2093,7 @@ function WorkerDashboard() {
 
                           <span>
                             {job.customers
+                              ?.users
                               ?.name ||
                               "Customer"}
                           </span>
@@ -2819,168 +2754,7 @@ function WorkerDashboard() {
 
       </main>
 
-      {/* =====================================================
-          JOB MODAL
-      ===================================================== */}
 
-      {selectedJob && (
-        <div
-          className="job-modal-overlay"
-          onClick={() =>
-            setSelectedJob(
-              null
-            )
-          }
-        >
-
-          <div
-            className="job-modal"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
-          >
-
-            <button
-              className="modal-close"
-              onClick={() =>
-                setSelectedJob(
-                  null
-                )
-              }
-            >
-              ✕
-            </button>
-
-            <div className="modal-job-icon">
-              🛠️
-            </div>
-
-            <span className="modal-job-category">
-              {
-                selectedJob.category
-              }
-            </span>
-
-            <h2>
-              {
-                selectedJob.title
-              }
-            </h2>
-
-            <p className="modal-description">
-              Request from{" "}
-              {
-                selectedJob.customer
-              }
-              . You are{" "}
-              {
-                selectedJob.distance_km
-              }{" "}
-              km away, with an estimated{" "}
-              {
-                selectedJob.eta_mins
-              }{" "}
-              minute drive.
-            </p>
-
-            <div className="modal-detail-grid">
-
-              <div>
-                <span>
-                  Customer
-                </span>
-
-                <strong>
-                  {
-                    selectedJob.customer
-                  }
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  Payment
-                </span>
-
-                <strong>
-                  ₹
-                  {
-                    selectedJob.price
-                  }
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  Distance
-                </span>
-
-                <strong>
-                  {
-                    selectedJob.distance_km
-                  }{" "}
-                  km
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  ETA
-                </span>
-
-                <strong>
-                  {
-                    selectedJob.eta_mins
-                  }{" "}
-                  min
-                </strong>
-              </div>
-
-            </div>
-
-            <div className="modal-actions">
-
-              <button
-                className="action-btn secondary"
-                disabled={
-                  respondingId ===
-                  selectedJob.booking_id
-                }
-                onClick={() =>
-                  respondToJob(
-                    selectedJob,
-                    "reject"
-                  )
-                }
-              >
-                Reject
-              </button>
-
-              <button
-                className="action-btn primary"
-                disabled={
-                  respondingId ===
-                  selectedJob.booking_id
-                }
-                onClick={() =>
-                  respondToJob(
-                    selectedJob,
-                    "accept"
-                  )
-                }
-              >
-                {respondingId ===
-                selectedJob.booking_id
-                  ? "Processing..."
-                  : "Accept Job"}
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-      )}
 
     </div>
   );
