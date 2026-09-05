@@ -61,20 +61,33 @@ function CustomerDashboard() {
     setWorkersList([]); 
 
     // Fallback coordinates (Chennai) in case geolocation fails or is slow
-    let lat = 13.0827;
-    let lng = 80.2707;
+    let lat = 12.9716;
+    let lng = 79.1325;
 
     // Try to get actual user location
+
     if ("geolocation" in navigator) {
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+          navigator.geolocation.getCurrentPosition(resolve, reject, { 
+            timeout: 10000, 
+            enableHighAccuracy: true,
+            maximumAge: 0 
+          });
         });
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
       } catch (err) {
-        console.warn("Geolocation denied/timeout. Using fallback location.");
+        console.warn("Geolocation denied/timeout. Defaulting to Vellore coordinates.", err);
       }
+    }
+    if (customerData?.id) {
+      const { error: updateErr } = await supabase
+        .from('customers')
+        .update({ location_lat: lat, location_lng: lng })
+        .eq('user_id', customerData.id);
+        
+      if (updateErr) console.error("Failed to update customer location in DB:", updateErr);
     }
 
     try {
