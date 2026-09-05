@@ -326,7 +326,72 @@ function CustomerDashboard() {
           </div>
         )}
 
-        {/* TAB 2 & 3 (Bookings & Profile - Omitted for brevity, keep your existing code) */}
+        {/* PROFILE TAB */}
+        {activeTab === 'profile' && (
+          <div className="customer-tab-panel fade-in">
+            <div className="profile-card" style={{
+              background: '#fff', 
+              padding: '2rem', 
+              borderRadius: '8px', 
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              maxWidth: '600px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ 
+                  width: '60px', height: '60px', borderRadius: '50%', 
+                  background: '#1e293b', color: 'white', display: 'flex', 
+                  alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' 
+                }}>
+                  {customerData?.name?.charAt(0) || "C"}
+                </div>
+                <div>
+                  <h2 style={{ margin: 0 }}>{customerData?.name || "Customer Profile"}</h2>
+                  <span style={{ color: '#64748b', textTransform: 'capitalize' }}>
+                    {customerData?.role || "Member"} Account
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="info-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Full Name
+                  </label>
+                  <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
+                    {customerData?.name || "Not provided"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Email Address
+                  </label>
+                  <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
+                    {customerData?.email || "Not provided"}
+                  </div>
+                </div>
+
+                <div className="info-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Phone Number
+                  </label>
+                  <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
+                    {customerData?.phone || "Not provided"}
+                  </div>
+                </div>
+                
+                <div className="info-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Account ID
+                  </label>
+                  <div style={{ fontSize: '0.9rem', color: '#64748b', fontFamily: 'monospace' }}>
+                    {customerData?.id || "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
