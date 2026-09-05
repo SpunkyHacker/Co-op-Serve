@@ -181,8 +181,7 @@ const handleCreateAccount = async (event: React.FormEvent<HTMLFormElement>) => {
     options: {
       emailRedirectTo: "http://localhost:5173/customer-login", 
       data: {
-        first_name: firstName,
-        last_name: lastName,
+        name: `${firstName} ${lastName}`,
         phone: phone,
         role: "customer",
       },
