@@ -1200,7 +1200,7 @@ def get_worker_requests(
             customer_lat,
             customer_lng,
             expires_at,
-            customers(name)
+            customers(users(name))
             """
         )
         .eq(
@@ -1339,6 +1339,10 @@ def get_worker_requests(
 
         # ----------------------------------------------------
         # CUSTOMER NAME
+        #
+        # customers table has no "name" column.
+        # The name lives on users, reached via
+        # customers.user_id -> users.id.
         # ----------------------------------------------------
 
         customer = (
@@ -1346,8 +1350,13 @@ def get_worker_requests(
             or {}
         )
 
+        customer_user = (
+            customer.get("users")
+            or {}
+        )
+
         customer_name = (
-            customer.get("name")
+            customer_user.get("name")
             or "Customer"
         )
 
