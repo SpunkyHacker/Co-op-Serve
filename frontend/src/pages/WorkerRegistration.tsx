@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "./WorkerRegistration.css";
 
+
 function WorkerRegistration() {
   const navigate = useNavigate();
 
@@ -11,6 +12,7 @@ function WorkerRegistration() {
   // STEP STATE
   // =========================================
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // =========================================
   // FORM STATES
@@ -105,6 +107,11 @@ function WorkerRegistration() {
     event.preventDefault();
     setFormError("");
 
+      // Prevent execution if already submitting
+    if (!canProceedStep4 || isSubmitting) return;
+
+    // Lock the form
+    setIsSubmitting(true);
     if (!canProceedStep4) return;
 
     const { error } = await supabase.auth.signUp({
@@ -131,6 +138,8 @@ function WorkerRegistration() {
         },
       },
     });
+    // Unlock the form when the request finishes
+    setIsSubmitting(false);
 
     if (error) {
       setFormError(error.message);
@@ -487,7 +496,9 @@ function WorkerRegistration() {
 
                 <div className="worker-form-actions">
                   <button type="button" className="worker-btn-secondary" onClick={handleBack}>Back</button>
-                  <button type="submit" className="worker-btn-primary" disabled={!canProceedStep4}>Create Worker Account</button>
+                  <button type="submit" className="worker-btn-primary" disabled={!canProceedStep4} >
+                    {isSubmitting ? "Creating Account..." : "Create Account"}
+                  </button>
                 </div>
               </div>
             )}
