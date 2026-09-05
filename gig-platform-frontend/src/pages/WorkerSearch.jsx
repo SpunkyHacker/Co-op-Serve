@@ -78,8 +78,15 @@ export default function WorkerSearch() {
       if (data.status === 'success') {
         alert(`Success! Invites sent to workers. Group ID: ${data.group_id}`);
         setSelectedWorkers([]);
-        // Pass the group ID directly into the routing state
-        navigate('/booking', { state: { groupId: data.group_id } });
+        // Pass the booking IDs and location so the tracking dashboard can load
+        navigate('/booking', { 
+          state: { 
+            groupId: data.group_id,
+            bookingId: data.booking_ids[0], 
+            customerLat: filters.lat,
+            customerLng: filters.lng
+          } 
+        });
       }
     } catch (err) {
       console.error("Booking error:", err);

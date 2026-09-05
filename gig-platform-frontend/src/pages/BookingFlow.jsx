@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useWorkerLocationTracker } from '../hooks/useWorkerLocationTracker'; 
 
 const API_BASE = "http://localhost:8000";
 
@@ -30,30 +32,52 @@ export default function BookingFlow() {
 }
 
 // ==========================================
-// 1. CUSTOMER VIEW (5-Step Live Tracking)
-//    pending -> ongoing/en_route -> arrived -> work_done -> payment
+// 1. CUSTOMER VIEW (Live Tracking)
 // ==========================================
-import { useLocation, useNavigate } from 'react-router-dom';
-
-// ... (keep the main BookingFlow component as is)
-
 function CustomerBookingView() {
   const location = useLocation();
   const navigate = useNavigate();
   
+  const groupId = location.state?.groupId || null;
+
   const [bookingState, setBookingState] = useState('idle');
-  const [groupId, setGroupId] = useState(location.state?.groupId || null);
-  const [activeBookingId, setActiveBookingId] = useState(null);
+  const [activeBookingId, setActiveBookingId] = useState(location.state?.bookingId || null);
   const [workerLocation, setWorkerLocation] = useState(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [workerDetails, setWorkerDetails] = useState([]);
 
-  // Auto-start if we arrived from the search page
+  // Live customer tracking state
+  const [customerLoc, setCustomerLoc] = useState({
+    lat: location.state?.customerLat || 12.9165,
+    lng: location.state?.customerLng || 79.1325
+  });
+
+  // Auto-start the flow if we arrived from a fresh search
   useEffect(() => {
     if (groupId && bookingState === 'idle') {
       setBookingState('pending');
     }
   }, [groupId, bookingState]);
+
+  // Actively track the customer's live GPS while the worker is on the way
+  useEffect(() => {
+    if (bookingState === 'ongoing' || bookingState === 'en_route') {
+      if (!("geolocation" in navigator)) return;
+      
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setCustomerLoc({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => console.warn("Customer GPS error:", error),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      );
+      
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [bookingState]);
 
   // Polling loop to drive the UI state automatically
   useEffect(() => {
@@ -61,7 +85,6 @@ function CustomerBookingView() {
     
     const pollStatus = async () => {
       try {
-        // If we are still pending, poll the GROUP endpoint to get all worker timers
         if (bookingState === 'pending' && groupId) {
           const res = await fetch(`${API_BASE}/api/bookings/group/${groupId}/tracking`);
           if (!res.ok) return;
@@ -72,27 +95,35 @@ function CustomerBookingView() {
           if (data.status === 'accepted') {
             setActiveBookingId(data.booking_id);
             setBookingState('ongoing');
+            if (data.worker_live_lat && data.worker_live_lng) {
+              setWorkerLocation({ lat: data.worker_live_lat, lng: data.worker_live_lng });
+            }
           } else if (data.status === 'no_workers_available') {
             setBookingState('failed');
           }
         } 
-        // Once accepted, poll the SINGLE booking endpoint for live GPS/job progress
         else if (activeBookingId && bookingState !== 'payment' && bookingState !== 'failed') {
           const res = await fetch(`${API_BASE}/api/bookings/${activeBookingId}/tracking`);
           if (!res.ok) return;
           const data = await res.json();
 
+          if (data.worker_live_lat && data.worker_live_lng) {
+            setWorkerLocation({ lat: data.worker_live_lat, lng: data.worker_live_lng });
+          }
+
           if (data.status === 'en_route') {
             setBookingState('en_route');
-            if (data.worker_live_lat && data.worker_live_lng) {
-              setWorkerLocation({ lat: data.worker_live_lat, lng: data.worker_live_lng });
-            }
           } else if (data.status === 'in_progress') {
             setBookingState('arrived');
           } else if (data.status === 'work_done') {
             setBookingState('work_done');
           } else if (data.status === 'completed_pending_payment') {
             setBookingState('payment');
+          } else if (['rejected', 'expired', 'cancelled'].includes(data.status)) {
+            if (bookingState === 'pending' || bookingState === 'ongoing' || bookingState === 'en_route') {
+              alert("This booking has been declined, cancelled, or expired.");
+              navigate('/search');
+            }
           }
         }
       } catch (err) {
@@ -101,15 +132,56 @@ function CustomerBookingView() {
     };
 
     if (bookingState !== 'idle' && bookingState !== 'payment' && bookingState !== 'failed') {
-      pollStatus(); // run immediately
+      pollStatus(); 
       intervalId = setInterval(pollStatus, 3000);
     }
     return () => clearInterval(intervalId);
-  }, [activeBookingId, bookingState, groupId]);
+  }, [activeBookingId, bookingState, navigate, groupId]);
 
-  const confirmJobComplete = async () => { /* keep existing logic */ };
+  const confirmJobComplete = async () => {
+    if (!activeBookingId) return;
+    setIsConfirming(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/bookings/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: activeBookingId, status: 'completed_pending_payment' })
+      });
+      
+      if (!res.ok) {
+        alert("Failed to update status. Check FastAPI terminal for database errors.");
+        return;
+      }
+      
+      setBookingState('payment');
+    } catch (error) {
+      console.error("Confirm completion error:", error);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
-  // Helper component for live countdown timer
+  const cancelBooking = async (targetId) => {
+    if (!targetId) return;
+    const confirmCancel = window.confirm("Are you sure you want to cancel this request?");
+    if (!confirmCancel) return;
+
+    try {
+      await fetch(`${API_BASE}/api/bookings/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: targetId, status: 'cancelled' })
+      });
+      
+      if (bookingState !== 'pending') {
+        alert("Booking cancelled successfully.");
+        navigate('/search'); 
+      }
+    } catch (error) {
+      console.error("Cancellation error:", error);
+    }
+  };
+
   const Countdown = ({ expiresAt }) => {
     const [left, setLeft] = useState(0);
     useEffect(() => {
@@ -135,7 +207,7 @@ function CustomerBookingView() {
         </div>
       )}
 
-      {/* STEP 1: Pending with Timers */}
+      {/* STEP 1: Pending with Individual Worker Cards & Cancels */}
       {bookingState === 'pending' && (
         <div className="py-6">
           <div className="text-center mb-6">
@@ -146,13 +218,23 @@ function CustomerBookingView() {
           <div className="space-y-3">
             {workerDetails.map((worker) => (
               <div key={worker.booking_id} className="border p-4 rounded flex justify-between items-center bg-gray-50">
-                <span className="font-bold">{worker.worker_name}</span>
+                <div>
+                  <span className="font-bold block text-lg">{worker.worker_name}</span>
+                  {worker.status === 'pending' && (
+                    <button 
+                      onClick={() => cancelBooking(worker.booking_id)} 
+                      className="text-red-500 text-sm hover:underline mt-1 font-semibold block"
+                    >
+                      Cancel Request
+                    </button>
+                  )}
+                </div>
                 {worker.status === 'pending' ? (
                   <span className="text-blue-600 font-mono font-bold bg-blue-100 px-3 py-1 rounded">
                     ⏳ <Countdown expiresAt={worker.expires_at} />
                   </span>
                 ) : (
-                  <span className={`font-bold px-3 py-1 rounded text-sm ${worker.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>
+                  <span className={`font-bold px-3 py-1 rounded text-sm ${['rejected', 'cancelled', 'expired'].includes(worker.status) ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'}`}>
                     {worker.status.toUpperCase()}
                   </span>
                 )}
@@ -173,21 +255,101 @@ function CustomerBookingView() {
         </div>
       )}
 
-      {/* (Keep your existing STEP 2, 3, 3.5, and 4 blocks here exactly as they were...) */}
+      {/* STEP 2: Worker accepted & on the way */}
+      {(bookingState === 'ongoing' || bookingState === 'en_route') && (
+        <div className="py-6">
+          <div className="bg-green-50 border border-green-200 p-4 rounded mb-6 text-center shadow-sm">
+            <h3 className="text-xl font-bold text-green-700">Worker Accepted & On The Way! 🚀</h3>
+            <p className="text-sm text-gray-600 mt-1">Your service provider is navigating to your location.</p>
+          </div>
+
+          <div className="bg-white p-5 rounded border mb-6 shadow-sm">
+             <h4 className="font-bold text-lg mb-3 border-b pb-2">Job Details</h4>
+             <div className="flex justify-between mb-1">
+               <span className="text-gray-600">Service:</span>
+               <span className="font-bold">Plumbing Request</span>
+             </div>
+             <div className="flex justify-between">
+               <span className="text-gray-600">Estimated Pay:</span>
+               <span className="font-bold">₹500</span>
+             </div>
+          </div>
+
+          <div className="bg-gray-100 p-6 rounded text-center border mb-6 shadow-sm">
+            <p className="font-bold mb-3 text-lg">🗺️ Live GPS Tracking</p>
+            <p className="text-gray-700 font-mono bg-white p-2 rounded border inline-block mb-3">
+              {workerLocation ? `${workerLocation.lat.toFixed(5)}, ${workerLocation.lng.toFixed(5)}` : 'Awaiting GPS signal...'}
+            </p>
+            
+            {workerLocation && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${workerLocation.lat},${workerLocation.lng}&destination=${customerLoc.lat},${customerLoc.lng}&travelmode=driving`}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-blue-600 font-bold hover:underline"
+              >
+                View Travel Route in Google Maps ↗
+              </a>
+            )}
+          </div>
+
+          <button
+            onClick={() => cancelBooking(activeBookingId)}
+            className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded font-bold hover:bg-red-500 hover:text-white transition-colors"
+          >
+            Cancel Entire Job
+          </button>
+        </div>
+      )}
+
+      {/* STEP 3: Worker reached */}
+      {bookingState === 'arrived' && (
+        <div className="py-6 text-center">
+          <div className="text-5xl mb-4">🛠️</div>
+          <h3 className="text-2xl font-bold text-blue-600">Worker Reached & Performing Work</h3>
+          <p className="text-gray-600 mt-2">The provider is currently servicing your request at your location.</p>
+        </div>
+      )}
+
+      {/* STEP 3.5: Job completion confirmation */}
+      {bookingState === 'work_done' && (
+        <div className="py-6 text-center">
+          <div className="text-5xl mb-4">✅</div>
+          <h3 className="text-2xl font-bold text-green-700">Worker Has Finished the Job</h3>
+          <p className="text-gray-600 mt-2 mb-6">Please confirm the work is done to proceed to payment.</p>
+          <button
+            onClick={confirmJobComplete}
+            disabled={isConfirming}
+            className="bg-green-600 text-white px-8 py-3 rounded font-bold hover:bg-green-700 shadow"
+          >
+            {isConfirming ? 'Confirming...' : 'Mark Job as Complete'}
+          </button>
+        </div>
+      )}
+
+      {/* STEP 4: Payment */}
+      {bookingState === 'payment' && (
+        <PaymentPortal
+          bookingId={activeBookingId}
+          onComplete={() => setBookingState('idle')}
+        />
+      )}
     </div>
   );
 }
 
 // ==========================================
-// 2. WORKER ACTION VIEW (dev/test mirror of WorkerDashboard.jsx)
+// 2. WORKER ACTION VIEW 
 // ==========================================
 function WorkerActionView() {
   const [workerId, setWorkerId] = useState("0bdb4547-9fb2-4fb2-b319-1b70ad15022b");
   const [incomingJob, setIncomingJob] = useState(null);
-  const [activeJob, setActiveJob] = useState(null); // { booking_id, group_id, status, ... }
+  const [activeJob, setActiveJob] = useState(null); 
   const [timeLeft, setTimeLeft] = useState(120);
 
-  // Poll for incoming pending jobs assigned to this worker
+  const isActivelyWorking = activeJob && (activeJob.status === 'accepted' || activeJob.status === 'in_progress');
+  useWorkerLocationTracker(workerId, isActivelyWorking);
+
   useEffect(() => {
     let intervalId;
     if (workerId && !activeJob) {
@@ -207,7 +369,6 @@ function WorkerActionView() {
     return () => clearInterval(intervalId);
   }, [workerId, activeJob]);
 
-  // Countdown timer effect
   useEffect(() => {
     if (!incomingJob) return;
     const timer = setInterval(() => {

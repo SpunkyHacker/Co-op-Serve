@@ -386,9 +386,24 @@ def customer_track_group(group_id: str):
         "details": details
     }
 @app.put("/api/bookings/status")
-def update_booking_status(data: BookingStatusUpdate):
-    supabase.table("bookings").update({"status": data.status}).eq("id", data.booking_id).execute()
-    return {"status": "success", "new_status": data.status}
+def update_booking_status(payload: dict): # Or whatever Pydantic model you are using
+    booking_id = payload.get("booking_id")
+    new_status = payload.get("status")
+
+    # 1. Update the booking status in the database
+    res = supabase.table("bookings").update({"status": new_status}).eq("id", booking_id).execute()
+    
+    if not res.data:
+        return {"error": "Booking not found"}
+
+    # 2. NEW: Free up the worker if the job is finished or cancelled
+    if new_status in ["completed_pending_payment", "work_done", "cancelled", "completed"]:
+        worker_id = res.data[0].get("worker_id")
+        if worker_id:
+            # Flip the worker's availability back to true
+            supabase.table("workers").update({"is_available": True}).eq("id", worker_id).execute()
+
+    return {"status": "success", "data": res.data[0]}
 
 @app.post("/api/bookings/finalize")
 async def finalize_job_and_pay(data: JobCompletionModel):
