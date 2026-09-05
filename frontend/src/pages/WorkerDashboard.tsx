@@ -26,6 +26,22 @@ interface Location {
   lng: number;
 }
 
+interface WorkerRow {
+  id: string;
+  user_id: string;
+  gender: string | null;
+  skill_category: string;
+  eshram_id: string | null;
+  upi_id: string | null;
+  hourly_rate: number;
+  avg_rating: number;
+  total_jobs_completed: number;
+  is_available: boolean;
+  location_lat: number | null;
+  location_lng: number | null;
+  service_radius_km: number;
+}
+
 const API_BASE = (
   import.meta.env.VITE_API_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
@@ -495,7 +511,7 @@ function WorkerDashboard() {
           }
 
           const currentWorker =
-            data.workers;
+            data.workers as unknown as WorkerRow;
 
           if (!currentWorker) {
             alert(
@@ -1234,9 +1250,19 @@ function WorkerDashboard() {
             customer_lng:
               job.lng,
 
+            /*
+             * IMPORTANT:
+             * Match the same nested shape used by
+             * loadActiveJob() (customers.users.name),
+             * so the render below finds the name
+             * immediately, before the real refetch
+             * from Supabase happens.
+             */
             customers: {
-              name:
-                job.customer,
+              users: {
+                name:
+                  job.customer,
+              },
             },
           });
 
