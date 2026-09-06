@@ -77,6 +77,9 @@ function WorkerDashboard() {
   const [respondingId, setRespondingId] =
     useState<string | null>(null);
 
+  const [completingJob, setCompletingJob] =
+    useState(false);
+
   // ==========================================================
   // LOCATION
   // ==========================================================
@@ -271,50 +274,23 @@ function WorkerDashboard() {
     useCallback(async () => {
       if (!workerId) return;
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("bookings")
-        .select(
-          `
-          id,
-          group_id,
-          customer_id,
-          service_id,
-          price,
-          status,
-          customer_lat,
-          customer_lng,
-          customers(users(name))
-          `
-        )
-        .eq(
-          "worker_id",
-          workerId
-        )
-        .in(
-          "status",
-          [
-            "accepted",
-            "traveling",
-            "working",
-          ]
-        )
-        .order(
-          "id",
-          {
-            ascending: false,
-          }
-        )
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await supabase
+  .from("bookings")
+  .select("id, group_id, customer_id, price, status, customer_lat, customer_lng, customers(users(name)), services(category)")
+  .eq("worker_id", workerId)
+  .in("status", ["accepted", "traveling", "working", "completed_pending_payment"])
+  .order("id", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
-      if (!error) {
-        setActiveJob(
-          data || null
-        );
-      }
+if (!error) {
+  // Handle both array and object responses safely to satisfy TypeScript
+  const serviceData = Array.isArray(data?.services) ? data.services[0] : data?.services;
+  
+  setActiveJob(
+    data ? { ...data, service_id: (serviceData as any)?.category || "Service Request" } : null
+  );
+}
     }, [workerId]);
 
   // ==========================================================
@@ -325,42 +301,25 @@ function WorkerDashboard() {
     useCallback(async () => {
       if (!workerId) return;
 
-      const {
-        data,
-      } = await supabase
-        .from("bookings")
-        .select(
-          `
-          id,
-          service_id,
-          price,
-          status,
-          customer_id,
-          customers(users(name))
-          `
-        )
-        .eq(
-          "worker_id",
-          workerId
-        )
-        .eq(
-          "status",
-          "completed"
-        )
-        .order(
-          "id",
-          {
-            ascending: false,
-          }
-        )
-        .limit(50);
+      const { data } = await supabase
+  .from("bookings")
+  .select("id, price, status, customer_id, customers(users(name)), services(category)")
+  .eq("worker_id", workerId)
+  .eq("status", "completed")
+  .order("id", { ascending: false })
+  .limit(50);
 
-      const history =
-        data || [];
+const history = (data || []).map((row: any) => {
+  // Handle both array and object responses safely to satisfy TypeScript
+  const serviceData = Array.isArray(row.services) ? row.services[0] : row.services;
+  
+  return {
+    ...row,
+    service_id: (serviceData as any)?.category || "Completed Service"
+  };
+});
 
-      setHistoryJobs(
-        history
-      );
+setHistoryJobs(history);
 
       const bookingIds =
         history.map(
@@ -494,7 +453,11 @@ function WorkerDashboard() {
             return;
           }
 
-          const currentWorker =
+          // `workers` is embedded via a to-one relation (one worker row per
+          // user), so at runtime this is a single object - but Supabase's
+          // generated types can't always prove that and infer it as an
+          // array instead. Cast it explicitly to match the real shape.
+          const currentWorker: any =
             data.workers;
 
           if (!currentWorker) {
@@ -1272,6 +1235,61 @@ function WorkerDashboard() {
     };
 
   // ==========================================================
+  // MARK ACTIVE JOB AS DONE (hands off to customer for payment)
+  // ==========================================================
+
+  const markJobComplete =
+    async () => {
+      if (!activeJob) return;
+
+      setCompletingJob(true);
+
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/bookings/status`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              booking_id: activeJob.id,
+              status: "completed_pending_payment",
+            }),
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload.detail ||
+            payload.message ||
+            "Unable to mark job complete."
+          );
+        }
+
+        setActiveJob((current: any) =>
+          current
+            ? { ...current, status: "completed_pending_payment" }
+            : current
+        );
+      } catch (error: any) {
+        console.error(
+          "Marking job complete failed:",
+          error
+        );
+
+        alert(
+          error.message ||
+          "Unable to mark job complete."
+        );
+      } finally {
+        setCompletingJob(false);
+      }
+    };
+
+  // ==========================================================
   // SIGN OUT
   // ==========================================================
 
@@ -1965,10 +1983,44 @@ function WorkerDashboard() {
 
                 </div>
 
-                <p className="active-job-note">
-                  Your customer destination and payment
-                  details will appear here.
-                </p>
+                {activeJob.status ===
+                "completed_pending_payment" ? (
+                  <p className="active-job-note">
+                    Marked done — waiting for the
+                    customer to complete payment.
+                  </p>
+                ) : (
+                  <>
+                    <p className="active-job-note">
+                      Your customer destination and payment
+                      details will appear here.
+                    </p>
+
+                    <div className="active-job-actions">
+                      {activeJob.customer_lat &&
+                        activeJob.customer_lng && (
+                          <a
+                            className="action-btn secondary"
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${activeJob.customer_lat},${activeJob.customer_lng}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Open Navigation
+                          </a>
+                        )}
+
+                      <button
+                        className="action-btn primary"
+                        disabled={completingJob}
+                        onClick={markJobComplete}
+                      >
+                        {completingJob
+                          ? "Marking..."
+                          : "Mark Job Complete"}
+                      </button>
+                    </div>
+                  </>
+                )}
 
               </section>
             ) : (

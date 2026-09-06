@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "./CustomerDashboard.css";
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:8000"
+).replace(/\/$/, "");
+
+// Statuses that mean "nothing more will happen to this booking on its own"
+const TERMINAL_STATUSES = ["rejected", "cancelled", "expired", "completed"];
 
 function CustomerDashboard() {
   const navigate = useNavigate();
@@ -9,6 +16,8 @@ function CustomerDashboard() {
   // Base States
   const [loading, setLoading] = useState(true);
   const [customerData, setCustomerData] = useState<any>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null); // customers.id (NOT users.id)
+  const [customerCoords, setCustomerCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [activeTab, setActiveTab] = useState("discover");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -22,6 +31,24 @@ function CustomerDashboard() {
   const [maxPrice, setMaxPrice] = useState("");
   const [reqGender, setReqGender] = useState("");
   const [mustBeVerified, setMustBeVerified] = useState(false);
+
+  // Booking Request States (Discover tab)
+  const [requestingWorkerId, setRequestingWorkerId] = useState<string | null>(null);
+  const [requestedWorkerIds, setRequestedWorkerIds] = useState<Set<string>>(new Set());
+
+  // My Bookings States
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [trackingByBooking, setTrackingByBooking] = useState<Record<string, any>>({});
+  const bookingsRef = useRef<any[]>([]);
+  useEffect(() => { bookingsRef.current = bookings; }, [bookings]);
+
+  // Payment / Rating Modal States
+  const [paymentModalBooking, setPaymentModalBooking] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [ratingGiven, setRatingGiven] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [submittingPayment, setSubmittingPayment] = useState(false);
 
   useEffect(() => {
     const fetchSessionAndData = async () => {
@@ -39,6 +66,18 @@ function CustomerDashboard() {
         .maybeSingle(); 
 
       if (!error && data) setCustomerData(data);
+
+      // customers.id is a separate row from users.id, and it's what
+      // bookings.customer_id actually references - resolve it once up front.
+      const { data: customerRow, error: customerErr } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!customerErr && customerRow) setCustomerId(customerRow.id);
+      else if (customerErr) console.error("Failed to resolve customer record:", customerErr);
+
       setLoading(false);
     };
 
@@ -90,6 +129,10 @@ function CustomerDashboard() {
       if (updateErr) console.error("Failed to update customer location in DB:", updateErr);
     }
 
+    // Reuse these coordinates when the customer requests a booking, so we
+    // don't need to ask the browser for location again on every click.
+    setCustomerCoords({ lat, lng });
+
     try {
       // Build API URL with Query Parameters
       const baseUrl = "http://localhost:8000/api/workers/search";
@@ -128,6 +171,189 @@ function CustomerDashboard() {
     setMaxPrice("");
     setReqGender("");
     setMustBeVerified(false);
+  };
+
+  // =========================================
+  // GET (OR REUSE) THE CUSTOMER'S COORDINATES
+  // =========================================
+  const getCustomerCoords = async (): Promise<{ lat: number; lng: number }> => {
+    if (customerCoords) return customerCoords;
+
+    let lat = 12.9716;
+    let lng = 79.1325;
+
+    if ("geolocation" in navigator) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 10000,
+            enableHighAccuracy: true,
+            maximumAge: 0,
+          });
+        });
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch (err) {
+        console.warn("Geolocation denied/timeout. Defaulting to fallback coordinates.", err);
+      }
+    }
+
+    const coords = { lat, lng };
+    setCustomerCoords(coords);
+    return coords;
+  };
+
+  // =========================================
+  // REQUEST A BOOKING WITH A SPECIFIC WORKER
+  // =========================================
+  const handleRequestBooking = async (worker: any) => {
+    if (!customerId) {
+      alert("We couldn't find your customer profile. Please refresh and try again.");
+      return;
+    }
+    if (!selectedCategory) return;
+
+    setRequestingWorkerId(worker.worker_id);
+
+    try {
+      const { lat, lng } = await getCustomerCoords();
+
+      const response = await fetch(`${API_BASE}/api/bookings/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customerId,
+          customer_lat: lat,
+          customer_lng: lng,
+          worker_ids: [worker.worker_id],
+          service_id: selectedCategory,
+          price: worker.hourly_rate,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || payload.status !== "success") {
+        throw new Error(payload.detail || payload.message || "Unable to send booking request.");
+      }
+
+      setRequestedWorkerIds((current) => new Set(current).add(worker.worker_id));
+      setActiveTab("bookings");
+      fetchBookings();
+    } catch (error: any) {
+      console.error("Booking request failed:", error);
+      alert(error.message || "Unable to send booking request.");
+    } finally {
+      setRequestingWorkerId(null);
+    }
+  };
+
+  // =========================================
+  // MY BOOKINGS: FETCH + LIVE TRACKING
+  // =========================================
+  const fetchBookings = useCallback(async () => {
+    if (!customerId) return;
+
+    setBookingsLoading(true);
+    try {
+      const { data, error } = await supabase
+      .from("bookings")
+      .select("id, group_id, price, status, expires_at, worker_id, workers(id, hourly_rate, users(name)), services(category)")
+      .eq("customer_id", customerId)
+      .order("id", { ascending: false })
+      .limit(50);
+
+      if (!error && data) setBookings(data);
+      else if (error) console.error("Failed to load bookings:", error);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, [customerId]);
+
+  const pollLiveTracking = useCallback(async () => {
+    const active = bookingsRef.current.filter(
+      (b) => !TERMINAL_STATUSES.includes(b.status) && b.status !== "pending"
+    );
+    if (active.length === 0) return;
+
+    const results = await Promise.all(
+      active.map(async (b) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/bookings/${b.id}/tracking`);
+          const payload = await res.json();
+          return [b.id, payload] as const;
+        } catch {
+          return [b.id, null] as const;
+        }
+      })
+    );
+
+    setTrackingByBooking((current) => {
+      const next = { ...current };
+      for (const [id, payload] of results) {
+        if (payload) next[id] = payload;
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "bookings" && customerId) {
+      fetchBookings();
+    }
+  }, [activeTab, customerId, fetchBookings]);
+
+  useEffect(() => {
+    if (activeTab !== "bookings") return;
+    const interval = setInterval(() => {
+      fetchBookings();
+      pollLiveTracking();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeTab, fetchBookings, pollLiveTracking]);
+
+  // =========================================
+  // FINALIZE: PAYMENT + RATING
+  // =========================================
+  const openPaymentModal = (booking: any) => {
+    setPaymentModalBooking(booking);
+    setPaymentMethod("upi");
+    setRatingGiven(5);
+    setReviewText("");
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!paymentModalBooking) return;
+
+    setSubmittingPayment(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/bookings/finalize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: paymentModalBooking.id,
+          worker_id: paymentModalBooking.worker_id,
+          payment_amount: paymentModalBooking.price,
+          payment_method: paymentMethod,
+          rating_given: ratingGiven,
+          review_text: reviewText,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || payload.status !== "success") {
+        throw new Error(payload.detail || payload.message || "Unable to complete payment.");
+      }
+
+      setPaymentModalBooking(null);
+      fetchBookings();
+    } catch (error: any) {
+      console.error("Finalizing booking failed:", error);
+      alert(error.message || "Unable to complete payment.");
+    } finally {
+      setSubmittingPayment(false);
+    }
   };
 
   // Mock data for services
@@ -309,7 +535,17 @@ function CustomerDashboard() {
                             </div>
                           </div>
                           
-                          <button className="action-btn primary full-width">Request Booking</button>
+                          <button
+                            className="action-btn primary full-width"
+                            disabled={requestingWorkerId === worker.worker_id || requestedWorkerIds.has(worker.worker_id)}
+                            onClick={() => handleRequestBooking(worker)}
+                          >
+                            {requestingWorkerId === worker.worker_id
+                              ? "Sending Request..."
+                              : requestedWorkerIds.has(worker.worker_id)
+                              ? "Requested ✓"
+                              : "Request Booking"}
+                          </button>
                         </div>
                       ))
                     ) : (
@@ -321,6 +557,132 @@ function CustomerDashboard() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MY BOOKINGS TAB */}
+        {activeTab === 'bookings' && (
+          <div className="customer-tab-panel fade-in">
+            {bookingsLoading && bookings.length === 0 ? (
+              <div className="worker-list-loading">
+                <div className="spinner"></div>
+                <p>Loading your bookings...</p>
+              </div>
+            ) : bookings.length === 0 ? (
+              <div className="no-workers-state">
+                <span className="no-workers-icon">📅</span>
+                <h3>No bookings yet.</h3>
+                <p>Head to Discover Services to request a worker.</p>
+              </div>
+            ) : (
+              <div className="bookings-container">
+                {bookings.map((booking) => {
+                  const workerName = booking.workers?.users?.name || "Worker";
+                  const tracking = trackingByBooking[booking.id];
+                  const statusClass =
+                    booking.status === "completed" ? "completed" :
+                    ["accepted", "traveling", "working"].includes(booking.status) ? "in-progress" :
+                    booking.status;
+
+                  return (
+                    <div key={booking.id} className="booking-card">
+                      <div className="booking-header">
+                        <span className={`booking-status ${statusClass}`}>
+                          {booking.status.replace(/_/g, " ")}
+                        </span>
+                        <span className="booking-date">₹{booking.price}</span>
+                      </div>
+
+                      <div className="booking-details">
+                      <div className="booking-service-info">
+                        <h3>{booking.services?.category || "Service"}</h3>
+                        <p>{workerName}</p>
+                      </div>
+                        <div className="booking-price">₹{booking.price}</div>
+                      </div>
+
+                      {booking.status === "pending" && (
+                        <p className="active-job-note">
+                          Waiting for {workerName} to respond. This request expires shortly if unanswered.
+                        </p>
+                      )}
+
+                      {["accepted", "traveling", "working"].includes(booking.status) && (
+                        <p className="active-job-note">
+                          {workerName} is on the way{tracking?.worker_live_lat ? " — live location updating" : ""}.
+                        </p>
+                      )}
+
+                      {booking.status === "completed_pending_payment" && (
+                        <div className="booking-actions">
+                          <button className="action-btn primary" onClick={() => openPaymentModal(booking)}>
+                            Complete & Pay
+                          </button>
+                        </div>
+                      )}
+
+                      {["rejected", "cancelled", "expired"].includes(booking.status) && (
+                        <p className="active-job-note">
+                          This request didn't go through. Try requesting another worker.
+                        </p>
+                      )}
+
+                      {booking.status === "completed" && (
+                        <p className="active-job-note">Job completed and paid.</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* PAYMENT + RATING MODAL */}
+            {paymentModalBooking && (
+              <div className="payment-modal-overlay" onClick={() => setPaymentModalBooking(null)}>
+                <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+                  <h2>Complete Payment</h2>
+                  <p className="active-job-note">
+                    Amount due: <strong>₹{paymentModalBooking.price}</strong>
+                  </p>
+
+                  <div className="filter-group full-width">
+                    <label>Payment Method</label>
+                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                      <option value="upi">UPI</option>
+                      <option value="cash">Cash</option>
+                    </select>
+                  </div>
+
+                  <div className="filter-group full-width">
+                    <label>Rate Your Worker</label>
+                    <select value={ratingGiven} onChange={(e) => setRatingGiven(Number(e.target.value))}>
+                      {[5, 4, 3, 2, 1].map((n) => (
+                        <option key={n} value={n}>{"★".repeat(n)} ({n})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="filter-group full-width">
+                    <label>Review (optional)</label>
+                    <textarea
+                      rows={3}
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="How was the service?"
+                    />
+                  </div>
+
+                  <div className="booking-actions">
+                    <button className="action-btn secondary" onClick={() => setPaymentModalBooking(null)} disabled={submittingPayment}>
+                      Cancel
+                    </button>
+                    <button className="action-btn primary" onClick={handleSubmitPayment} disabled={submittingPayment}>
+                      {submittingPayment ? "Processing..." : "Pay & Submit Rating"}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

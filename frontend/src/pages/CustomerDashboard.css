@@ -410,6 +410,77 @@
   color: #087c73;
 }
 
+.booking-status.pending {
+  background: #fff7e6;
+  color: #b7791f;
+}
+
+.booking-status.completed_pending_payment {
+  background: #fff0e0;
+  color: #c2650a;
+}
+
+.booking-status.rejected,
+.booking-status.cancelled,
+.booking-status.expired {
+  background: #ffebee;
+  color: #c44848;
+}
+
+/* =========================================================
+   PAYMENT + RATING MODAL
+   ========================================================= */
+.payment-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 36, 59, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.payment-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(16, 36, 59, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payment-modal h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #10243b;
+}
+
+.payment-modal .filter-group select,
+.payment-modal .filter-group textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.payment-modal .filter-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #dce3e9;
+  border-radius: 6px;
+  background: #f5f8fb;
+  color: #10243b;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+}
+
+.payment-modal .booking-actions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
 .booking-date {
   font-size: 13px;
   color: #60768b;

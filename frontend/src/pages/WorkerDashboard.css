@@ -1125,6 +1125,19 @@
   font-size: 13px;
 }
 
+.active-job-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.active-job-actions .action-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* =========================================================
    PAYMENTS
    ========================================================= */
