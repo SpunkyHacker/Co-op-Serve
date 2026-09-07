@@ -661,77 +661,69 @@
   font-size: 12px;
 }
 
-.worker-jobs-grid {
+.worker-jobs-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
-.minimalist-card {
+.job-request-card {
+  background: #ffffff;
+  border: 1px solid #dce3e9;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(16, 36, 59, 0.03);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 200px;
-  border-radius: 8px;
-  border: 1px solid #e1e7ed;
-  background: #ffffff;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(16, 36, 59, 0.04);
-  cursor: pointer;
-  transition: 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.minimalist-card:hover {
+.job-request-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(16, 36, 59, 0.08);
 }
 
-.job-distance {
-  display: inline-block;
-  background: #e9f1ff;
-  color: #005c55;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 8px;
+.job-request-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #10243b;
 }
 
-.minimalist-card h3 {
-  margin: 0 0 6px;
-  font-size: 16px;
-}
-
-.job-description {
-  color: #60768b;
-  font-size: 13px;
-  line-height: 1.5;
+.job-request-details {
+  display: flex;
+  justify-content: space-between;
+  background: #f5f8fb;
+  padding: 16px;
+  border-radius: 8px;
   margin-bottom: 20px;
 }
 
-.job-card-footer {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-  padding-top: 15px;
-  border-top: 1px solid #edf0f2;
-}
-
-.job-card-footer div {
+.job-detail-box {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
-.job-card-footer small {
+.job-detail-box small {
+  font-size: 11px;
   color: #60768b;
-  font-size: 10px;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
-.job-card-footer strong {
-  font-size: 18px;
+.job-detail-box strong {
+  font-size: 14px;
+  color: #10243b;
+}
+
+.job-request-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.job-request-actions .action-btn {
+  flex: 1;
 }
 
 /* =========================================================
@@ -1310,7 +1302,7 @@
     padding: 30px;
   }
 
-  .worker-jobs-grid {
+  .worker-jobs-list {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -1348,7 +1340,7 @@
     display: block;
   }
 
-  .worker-jobs-grid,
+  .worker-jobs-list,
   .stats-row,
   .profile-grid,
   .earnings-overview,
@@ -1376,8 +1368,12 @@
     gap: 12px;
   }
 
-  .worker-jobs-grid {
+  .worker-jobs-list {
     grid-template-columns: 1fr;
+  }
+
+  .job-request-actions {
+    flex-direction: column;
   }
 
   .history-row {

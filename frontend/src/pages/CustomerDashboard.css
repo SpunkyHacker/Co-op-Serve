@@ -804,3 +804,30 @@
     grid-template-columns: 1fr;
   }
 }
+
+.floating-action-bar {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10243b;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 30px rgba(16, 36, 59, 0.3);
+  z-index: 100;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pending-timer-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e9ee;
+}

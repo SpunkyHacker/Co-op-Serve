@@ -9,9 +9,26 @@ const API_BASE = (
 
 // Statuses that mean "nothing more will happen to this booking on its own"
 const TERMINAL_STATUSES = ["rejected", "cancelled", "expired", "completed"];
-
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 function CustomerDashboard() {
   const navigate = useNavigate();
+
+  // Booking Request States (Discover tab)
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<Set<string>>(new Set());
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  // Live Timer State
+  const [now, setNow] = useState(Date.now());
+  
+  useEffect(() => {
+    // Update the 'now' state every second to drive the countdown timers
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Base States
   const [loading, setLoading] = useState(true);
@@ -31,10 +48,6 @@ function CustomerDashboard() {
   const [maxPrice, setMaxPrice] = useState("");
   const [reqGender, setReqGender] = useState("");
   const [mustBeVerified, setMustBeVerified] = useState(false);
-
-  // Booking Request States (Discover tab)
-  const [requestingWorkerId, setRequestingWorkerId] = useState<string | null>(null);
-  const [requestedWorkerIds, setRequestedWorkerIds] = useState<Set<string>>(new Set());
 
   // My Bookings States
   const [bookings, setBookings] = useState<any[]>([]);
@@ -67,8 +80,6 @@ function CustomerDashboard() {
 
       if (!error && data) setCustomerData(data);
 
-      // customers.id is a separate row from users.id, and it's what
-      // bookings.customer_id actually references - resolve it once up front.
       const { data: customerRow, error: customerErr } = await supabase
         .from("customers")
         .select("id")
@@ -103,8 +114,6 @@ function CustomerDashboard() {
     let lat = 12.9716;
     let lng = 79.1325;
 
-    // Try to get actual user location
-
     if ("geolocation" in navigator) {
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -120,6 +129,7 @@ function CustomerDashboard() {
         console.warn("Geolocation denied/timeout. Defaulting to Vellore coordinates.", err);
       }
     }
+    
     if (customerData?.id) {
       const { error: updateErr } = await supabase
         .from('customers')
@@ -129,12 +139,9 @@ function CustomerDashboard() {
       if (updateErr) console.error("Failed to update customer location in DB:", updateErr);
     }
 
-    // Reuse these coordinates when the customer requests a booking, so we
-    // don't need to ask the browser for location again on every click.
     setCustomerCoords({ lat, lng });
 
     try {
-      // Build API URL with Query Parameters
       const baseUrl = "http://localhost:8000/api/workers/search";
       const params = new URLSearchParams({
         customer_lat: lat.toString(),
@@ -166,11 +173,11 @@ function CustomerDashboard() {
   const handleBackToServices = () => {
     setSelectedCategory(null);
     setWorkersList([]);
-    // Reset filters
     setSortPref("recommended");
     setMaxPrice("");
     setReqGender("");
     setMustBeVerified(false);
+    setSelectedWorkerIds(new Set()); // Reset selections on back
   };
 
   // =========================================
@@ -204,19 +211,19 @@ function CustomerDashboard() {
   };
 
   // =========================================
-  // REQUEST A BOOKING WITH A SPECIFIC WORKER
+  // REQUEST BOOKINGS
   // =========================================
-  const handleRequestBooking = async (worker: any) => {
-    if (!customerId) {
-      alert("We couldn't find your customer profile. Please refresh and try again.");
-      return;
-    }
-    if (!selectedCategory) return;
-
-    setRequestingWorkerId(worker.worker_id);
+  const handleRequestSelected = async () => {
+    if (!customerId || selectedWorkerIds.size === 0 || !selectedCategory) return;
+    setIsRequesting(true);
 
     try {
       const { lat, lng } = await getCustomerCoords();
+      
+      // Use the price of the first selected worker as the baseline for the group
+      const firstWorkerId = Array.from(selectedWorkerIds)[0];
+      const workerData = workersList.find(w => w.worker_id === firstWorkerId);
+      const price = workerData ? workerData.hourly_rate : 0;
 
       const response = await fetch(`${API_BASE}/api/bookings/request`, {
         method: "POST",
@@ -225,9 +232,9 @@ function CustomerDashboard() {
           customer_id: customerId,
           customer_lat: lat,
           customer_lng: lng,
-          worker_ids: [worker.worker_id],
+          worker_ids: Array.from(selectedWorkerIds),
           service_id: selectedCategory,
-          price: worker.hourly_rate,
+          price: price,
         }),
       });
 
@@ -237,14 +244,27 @@ function CustomerDashboard() {
         throw new Error(payload.detail || payload.message || "Unable to send booking request.");
       }
 
-      setRequestedWorkerIds((current) => new Set(current).add(worker.worker_id));
+      setSelectedWorkerIds(new Set());
       setActiveTab("bookings");
       fetchBookings();
     } catch (error: any) {
       console.error("Booking request failed:", error);
       alert(error.message || "Unable to send booking request.");
     } finally {
-      setRequestingWorkerId(null);
+      setIsRequesting(false);
+    }
+  };
+
+  const handleCancelSingle = async (bookingId: string) => {
+    try {
+      await fetch(`${API_BASE}/api/bookings/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, status: "cancelled" })
+      });
+      fetchBookings();
+    } catch (error) {
+      console.error("Failed to cancel request:", error);
     }
   };
 
@@ -258,9 +278,9 @@ function CustomerDashboard() {
     try {
       const { data, error } = await supabase
       .from("bookings")
-      .select("id, group_id, price, status, expires_at, worker_id, workers(id, hourly_rate, users(name)), services(category)")
+      .select("id, group_id, price, status, expires_at, worker_id, workers(id, hourly_rate, users(name)), services(category), created_at")
       .eq("customer_id", customerId)
-      .order("id", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(50);
 
       if (!error && data) setBookings(data);
@@ -322,42 +342,74 @@ function CustomerDashboard() {
     setReviewText("");
   };
 
-  const handleSubmitPayment = async () => {
+    const handleSubmitPayment = async () => {
     if (!paymentModalBooking) return;
-
     setSubmittingPayment(true);
+
     try {
-      const response = await fetch(`${API_BASE}/api/bookings/finalize`, {
+      // 1. Ask backend to create a Razorpay order
+      const orderRes = await fetch(`${API_BASE}/api/payments/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking_id: paymentModalBooking.id,
-          worker_id: paymentModalBooking.worker_id,
-          payment_amount: paymentModalBooking.price,
-          payment_method: paymentMethod,
-          rating_given: ratingGiven,
-          review_text: reviewText,
-        }),
+        body: JSON.stringify({ booking_id: paymentModalBooking.id }),
       });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.detail || "Could not start payment.");
 
-      const payload = await response.json();
+      // 2. Open Razorpay's checkout popup
+      const options = {
+        key: orderData.key_id,
+        amount: orderData.amount,
+        currency: "INR",
+        name: "Co-op Serve",
+        description: "Service payment",
+        order_id: orderData.order_id,
+        handler: async function (response: any) {
+          // 3. On success, send proof to backend to verify + finalize
+          try {
+            const verifyRes = await fetch(`${API_BASE}/api/payments/verify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                booking_id: paymentModalBooking.id,
+                worker_id: paymentModalBooking.worker_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                rating_given: ratingGiven,
+                review_text: reviewText,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || verifyData.status !== "success") {
+              throw new Error(verifyData.detail || "Payment could not be verified.");
+            }
+            setPaymentModalBooking(null);
+            fetchBookings();
+          } catch (err: any) {
+            alert(err.message || "Payment verification failed.");
+          } finally {
+            setSubmittingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setSubmittingPayment(false); // user closed the popup without paying
+          },
+        },
+        prefill: {},
+        theme: { color: "#1a1a1a" },
+      };
 
-      if (!response.ok || payload.status !== "success") {
-        throw new Error(payload.detail || payload.message || "Unable to complete payment.");
-      }
-
-      setPaymentModalBooking(null);
-      fetchBookings();
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (error: any) {
-      console.error("Finalizing booking failed:", error);
-      alert(error.message || "Unable to complete payment.");
-    } finally {
+      console.error("Payment init failed:", error);
+      alert(error.message || "Unable to start payment.");
       setSubmittingPayment(false);
     }
   };
-
-  // Mock data for services
-// Mock data for services mapped to Database Categories
+  // Mock data for services mapped to Database Categories
   const services = [
     { id: 1, name: "Electrician", dbCategory: "Electrical", icon: "⚡", desc: "Wiring, repairs, and installations." },
     { id: 2, name: "Plumber", dbCategory: "Plumbing", icon: "💧", desc: "Pipe leaks, fittings, and bathroom setups." },
@@ -383,7 +435,7 @@ function CustomerDashboard() {
 
   return (
     <div className="customer-dashboard-layout">
-      {/* SIDEBAR NAVIGATION (Unchanged) */}
+      {/* SIDEBAR NAVIGATION */}
       <aside className="customer-sidebar">
         <div className="customer-sidebar-brand">
           <div className="customer-brand-logo">CS</div>
@@ -536,15 +588,19 @@ function CustomerDashboard() {
                           </div>
                           
                           <button
-                            className="action-btn primary full-width"
-                            disabled={requestingWorkerId === worker.worker_id || requestedWorkerIds.has(worker.worker_id)}
-                            onClick={() => handleRequestBooking(worker)}
+                            className={`action-btn full-width ${selectedWorkerIds.has(worker.worker_id) ? 'secondary' : 'primary'}`}
+                            disabled={!selectedWorkerIds.has(worker.worker_id) && selectedWorkerIds.size >= 3}
+                            onClick={() => {
+                              const next = new Set(selectedWorkerIds);
+                              if (next.has(worker.worker_id)) {
+                                next.delete(worker.worker_id);
+                              } else {
+                                if (next.size < 3) next.add(worker.worker_id);
+                              }
+                              setSelectedWorkerIds(next);
+                            }}
                           >
-                            {requestingWorkerId === worker.worker_id
-                              ? "Sending Request..."
-                              : requestedWorkerIds.has(worker.worker_id)
-                              ? "Requested ✓"
-                              : "Request Booking"}
+                            {selectedWorkerIds.has(worker.worker_id) ? "Selected ✓" : "Select Worker"}
                           </button>
                         </div>
                       ))
@@ -555,6 +611,16 @@ function CustomerDashboard() {
                         <p>Try adjusting your filters or checking back later.</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* FLOATING ACTION BAR FOR MULTI-SELECT */}
+                {selectedWorkerIds.size > 0 && (
+                  <div className="floating-action-bar fade-in">
+                    <span>{selectedWorkerIds.size} of 3 maximum workers selected</span>
+                    <button className="action-btn primary" onClick={handleRequestSelected} disabled={isRequesting}>
+                      {isRequesting ? "Sending Requests..." : "Request Selected Workers"}
+                    </button>
                   </div>
                 )}
               </div>
@@ -578,44 +644,77 @@ function CustomerDashboard() {
               </div>
             ) : (
               <div className="bookings-container">
-                {bookings.map((booking) => {
+                {bookings.map((booking: any) => {
                   const workerName = booking.workers?.users?.name || "Worker";
                   const tracking = trackingByBooking[booking.id];
-                  const statusClass =
-                    booking.status === "completed" ? "completed" :
-                    ["accepted", "traveling", "working"].includes(booking.status) ? "in-progress" :
-                    booking.status;
+                  
+                  // Safely fallback to "pending" if the status is null in the database
+                  const safeStatus = booking.status || "pending";
+                  const isPending = safeStatus === "pending";
+                  
+                  // Calculate live countdown timer
+                  let timeLeft = 0;
+                  if (isPending && booking.expires_at) {
+                    timeLeft = Math.max(0, Math.floor((new Date(booking.expires_at).getTime() - now) / 1000));
+                  }
+                  const isExpired = isPending && timeLeft === 0;
+
+                  const displayStatus = isExpired ? "expired" : safeStatus;
+                  const statusClass = (isExpired || ["rejected", "cancelled"].includes(safeStatus)) ? "cancelled" : safeStatus;
 
                   return (
                     <div key={booking.id} className="booking-card">
                       <div className="booking-header">
                         <span className={`booking-status ${statusClass}`}>
-                          {booking.status.replace(/_/g, " ")}
+                          {displayStatus.replace(/_/g, " ")}
                         </span>
                         <span className="booking-date">₹{booking.price}</span>
                       </div>
 
                       <div className="booking-details">
-                      <div className="booking-service-info">
-                        <h3>{booking.services?.category || "Service"}</h3>
-                        <p>{workerName}</p>
-                      </div>
+                        <div className="booking-service-info">
+                          <h3>{booking.services?.category || "Service Request"}</h3>
+                          <p>{workerName}</p>
+                        </div>
                         <div className="booking-price">₹{booking.price}</div>
                       </div>
 
-                      {booking.status === "pending" && (
-                        <p className="active-job-note">
-                          Waiting for {workerName} to respond. This request expires shortly if unanswered.
-                        </p>
+                      {isPending && !isExpired && (
+                        <div className="pending-timer-section">
+                          <p className="active-job-note" style={{ margin: 0 }}>
+                            Waiting for response... Expires in <strong style={{color: '#c44848'}}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
+                          </p>
+                          <button className="action-btn danger" onClick={() => handleCancelSingle(booking.id)}>
+                            Cancel Request
+                          </button>
+                        </div>
                       )}
 
-                      {["accepted", "traveling", "working"].includes(booking.status) && (
-                        <p className="active-job-note">
-                          {workerName} is on the way{tracking?.worker_live_lat ? " — live location updating" : ""}.
-                        </p>
+                      {["accepted", "traveling", "working"].includes(displayStatus) && (
+                        <div className="active-tracking-box" style={{ background: '#f5f8fb', padding: '16px', borderRadius: '8px', border: '1px solid #e5e9ee', marginTop: '16px' }}>
+                          <p className="active-job-note" style={{ margin: '0 0 12px 0', fontWeight: 600, color: '#087c73' }}>
+                            {workerName} has accepted your request and is on the way!
+                          </p>
+                          
+                          {tracking?.worker_live_lat && tracking?.worker_live_lng ? (
+                            <a
+                              className="action-btn primary"
+                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                              href={`https://www.google.com/maps/search/?api=1&query=${tracking.worker_live_lat},${tracking.worker_live_lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              🗺️ View Live Worker Location on Map
+                            </a>
+                          ) : (
+                            <p style={{ fontSize: '12px', color: '#60768b', margin: 0 }}>
+                              Waiting for worker's live GPS coordinates...
+                            </p>
+                          )}
+                        </div>
                       )}
 
-                      {booking.status === "completed_pending_payment" && (
+                      {displayStatus === "completed_pending_payment" && (
                         <div className="booking-actions">
                           <button className="action-btn primary" onClick={() => openPaymentModal(booking)}>
                             Complete & Pay
@@ -623,13 +722,13 @@ function CustomerDashboard() {
                         </div>
                       )}
 
-                      {["rejected", "cancelled", "expired"].includes(booking.status) && (
+                      {["rejected", "cancelled", "expired"].includes(displayStatus) && (
                         <p className="active-job-note">
-                          This request didn't go through. Try requesting another worker.
+                          This request was not completed.
                         </p>
                       )}
 
-                      {booking.status === "completed" && (
+                      {displayStatus === "completed" && (
                         <p className="active-job-note">Job completed and paid.</p>
                       )}
                     </div>

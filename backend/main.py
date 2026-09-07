@@ -8,6 +8,9 @@ import random
 import smtplib
 from email.message import EmailMessage
 import jwt
+import razorpay
+import hmac
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
@@ -56,7 +59,10 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev_fallback_secret")
 JWT_ALGORITHM = "HS256"
-
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+print("Loaded Razorpay Key ID:", RAZORPAY_KEY_ID)
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 otp_store = {}
 
 def utcnow() -> datetime:
@@ -199,7 +205,17 @@ class BookingRequestModel(BaseModel): customer_id: str; customer_lat: float; cus
 class WorkerResponseModel(BaseModel): booking_id: str; worker_id: str; group_id: str; action: str
 class BookingStatusUpdate(BaseModel): booking_id: str; status: str
 class JobCompletionModel(BaseModel): booking_id: str; worker_id: str; payment_amount: float; payment_method: str; rating_given: int; review_text: Optional[str] = ""
+class CreateOrderModel(BaseModel):
+    booking_id: str
 
+class VerifyPaymentModel(BaseModel):
+    booking_id: str
+    worker_id: str
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    rating_given: int
+    review_text: Optional[str] = ""
 # --- AUTH ENDPOINTS ---
 
 @app.post("/api/auth/request-otp")
@@ -418,6 +434,16 @@ def customer_track_group(group_id: str):
 from pydantic import BaseModel
 from fastapi import HTTPException
 
+
+class GroupCancelModel(BaseModel):
+    group_id: str
+
+@app.post("/api/bookings/group/cancel")
+async def customer_cancel_group(data: GroupCancelModel):
+    # Cancel all pending requests for this group ID
+    supabase.table("bookings").update({"status": "cancelled"}).eq("group_id", data.group_id).eq("status", "pending").execute()
+    return {"status": "success", "message": "Requests cancelled."}
+    status: str
 class StatusUpdate(BaseModel):
     booking_id: str
     status: str
@@ -425,14 +451,18 @@ class StatusUpdate(BaseModel):
 @app.put("/api/bookings/status")
 def update_booking_status(payload: StatusUpdate):
     try:
+        # Extract safely from the Pydantic model
+        booking_id = payload.booking_id
+        new_status = payload.status
+
         # 1. Update the booking status in Supabase
-        res = supabase.table("bookings").update({"status": payload.status}).eq("id", payload.booking_id).execute()
+        res = supabase.table("bookings").update({"status": new_status}).eq("id", booking_id).execute()
         
         if not res.data:
             raise HTTPException(status_code=404, detail="Booking not found")
 
         # 2. Free up the worker if the job is finished or cancelled
-        if payload.status in ["completed_pending_payment", "work_done", "cancelled", "completed"]:
+        if new_status in ["completed_pending_payment", "work_done", "cancelled", "completed"]:
             worker_id = res.data[0].get("worker_id")
             if worker_id:
                 supabase.table("workers").update({"is_available": True}).eq("id", worker_id).execute()
@@ -440,37 +470,75 @@ def update_booking_status(payload: StatusUpdate):
         return {"status": "success", "data": res.data[0]}
     except Exception as e:
         print(f"CRITICAL STATUS UPDATE ERROR: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e)) # Or whatever Pydantic model you are using
-    booking_id = payload.get("booking_id")
-    new_status = payload.get("status")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # 1. Update the booking status in the database
-    res = supabase.table("bookings").update({"status": new_status}).eq("id", booking_id).execute()
-    
-    if not res.data:
-        return {"error": "Booking not found"}
+@app.post("/api/payments/create-order")
+async def create_payment_order(data: CreateOrderModel):
+    # Pull the price from the booking itself — never trust an amount from the client.
+    booking_res = supabase.table("bookings").select("price, status").eq("id", data.booking_id).maybe_single().execute()
+    if not booking_res.data:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking_res.data["status"] != "completed_pending_payment":
+        raise HTTPException(status_code=400, detail="Booking isn't ready for payment")
 
-    # 2. NEW: Free up the worker if the job is finished or cancelled
-    if new_status in ["completed_pending_payment", "work_done", "cancelled", "completed"]:
-        worker_id = res.data[0].get("worker_id")
-        if worker_id:
-            # Flip the worker's availability back to true
-            supabase.table("workers").update({"is_available": True}).eq("id", worker_id).execute()
+    amount_paise = int(round(float(booking_res.data["price"]) * 100))  # Razorpay wants paise, not rupees
+    order = razorpay_client.order.create({
+        "amount": amount_paise,
+        "currency": "INR",
+        "receipt": data.booking_id,
+        "notes": {"booking_id": data.booking_id},
+    })
+    return {"status": "success", "order_id": order["id"], "amount": amount_paise, "key_id": RAZORPAY_KEY_ID}
 
-    return {"status": "success", "data": res.data[0]}
 
-@app.post("/api/bookings/finalize")
-async def finalize_job_and_pay(data: JobCompletionModel):
-    supabase.table("payments").insert({"booking_id": data.booking_id, "amount": data.payment_amount, "method": data.payment_method, "status": "completed"}).execute()
-    supabase.table("ratings").insert({"booking_id": data.booking_id, "rating": data.rating_given, "review": data.review_text}).execute()
-    worker_res = supabase.table("workers").select("avg_rating, total_jobs_completed").eq("id", data.worker_id).execute()
-    stats = worker_res.data[0]
-    new_total = (stats.get("total_jobs_completed") or 0) + 1
-    new_avg = (((stats.get("avg_rating") or 0.0) * (new_total - 1)) + data.rating_given) / new_total
-    supabase.table("workers").update({"total_jobs_completed": new_total, "avg_rating": round(new_avg, 2), "is_available": True}).eq("id", data.worker_id).execute()
-    supabase.table("bookings").update({"status": "completed"}).eq("id", data.booking_id).execute()
-    return {"status": "success", "message": "Payment recorded, rating saved, worker online."}
+@app.post("/api/payments/verify")
+async def verify_and_finalize(data: VerifyPaymentModel):
+    # 1. Verify the signature — this is what proves the payment is real and untampered
+    generated_signature = hmac.new(
+        RAZORPAY_KEY_SECRET.encode(),
+        f"{data.razorpay_order_id}|{data.razorpay_payment_id}".encode(),
+        hashlib.sha256
+    ).hexdigest()
 
+    if generated_signature != data.razorpay_signature:
+        raise HTTPException(status_code=400, detail="Payment verification failed.")
+
+    # 2. Fetch the actual paid amount from Razorpay's servers (don't trust the client here either)
+    payment = razorpay_client.payment.fetch(data.razorpay_payment_id)
+    amount_paid = float(payment["amount"]) / 100.0
+
+    try:
+        supabase.table("payments").insert([{
+            "booking_id": data.booking_id,
+            "amount": amount_paid,
+            "method": "razorpay",
+            "status": "completed",
+            "razorpay_order_id": data.razorpay_order_id,
+            "razorpay_payment_id": data.razorpay_payment_id,
+        }]).execute()
+
+        supabase.table("ratings").insert([{
+            "booking_id": data.booking_id,
+            "rating": data.rating_given,
+            "review": data.review_text,
+        }]).execute()
+
+        worker_res = supabase.table("workers").select("avg_rating, total_jobs_completed").eq("id", data.worker_id).execute()
+        if worker_res.data:
+            stats = worker_res.data[0]
+            new_total = (stats.get("total_jobs_completed") or 0) + 1
+            new_avg = (((float(stats.get("avg_rating") or 0.0)) * (new_total - 1)) + data.rating_given) / new_total
+            supabase.table("workers").update({
+                "total_jobs_completed": new_total,
+                "avg_rating": round(new_avg, 2),
+                "is_available": True,
+            }).eq("id", data.worker_id).execute()
+
+        supabase.table("bookings").update({"status": "completed"}).eq("id", data.booking_id).execute()
+        return {"status": "success", "message": "Payment verified, rating saved, worker updated."}
+    except Exception as e:
+        print(f"CRITICAL VERIFY/FINALIZE ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 @app.post("/api/workers/update-location")
 async def update_worker_location(data: WorkerLocationUpdate):
     supabase.table("workers").update({"location_lat": data.lat, "location_lng": data.lng}).eq("id", data.worker_id).execute()
