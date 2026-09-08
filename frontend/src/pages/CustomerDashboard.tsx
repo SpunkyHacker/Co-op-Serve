@@ -63,6 +63,22 @@ function CustomerDashboard() {
   const [reviewText, setReviewText] = useState("");
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string, type: "error" | "success" = "error") => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 4500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchSessionAndData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -142,7 +158,7 @@ function CustomerDashboard() {
     setCustomerCoords({ lat, lng });
 
     try {
-      const baseUrl = "http://localhost:8000/api/workers/search";
+      const baseUrl = `${API_BASE}/api/workers/search`;
       const params = new URLSearchParams({
         customer_lat: lat.toString(),
         customer_lng: lng.toString(),
@@ -249,7 +265,7 @@ function CustomerDashboard() {
       fetchBookings();
     } catch (error: any) {
       console.error("Booking request failed:", error);
-      alert(error.message || "Unable to send booking request.");
+      showToast(error.message || "Unable to send booking request.");
     } finally {
       setIsRequesting(false);
     }
@@ -387,7 +403,7 @@ function CustomerDashboard() {
             setPaymentModalBooking(null);
             fetchBookings();
           } catch (err: any) {
-            alert(err.message || "Payment verification failed.");
+            showToast(err.message || "Payment verification failed.");
           } finally {
             setSubmittingPayment(false);
           }
@@ -405,7 +421,7 @@ function CustomerDashboard() {
       rzp.open();
     } catch (error: any) {
       console.error("Payment init failed:", error);
-      alert(error.message || "Unable to start payment.");
+      showToast(error.message || "Unable to start payment.");
       setSubmittingPayment(false);
     }
   };
@@ -613,16 +629,6 @@ function CustomerDashboard() {
                     )}
                   </div>
                 )}
-
-                {/* FLOATING ACTION BAR FOR MULTI-SELECT */}
-                {selectedWorkerIds.size > 0 && (
-                  <div className="floating-action-bar fade-in">
-                    <span>{selectedWorkerIds.size} of 3 maximum workers selected</span>
-                    <button className="action-btn primary" onClick={handleRequestSelected} disabled={isRequesting}>
-                      {isRequesting ? "Sending Requests..." : "Request Selected Workers"}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -736,54 +742,6 @@ function CustomerDashboard() {
                 })}
               </div>
             )}
-
-            {/* PAYMENT + RATING MODAL */}
-            {paymentModalBooking && (
-              <div className="payment-modal-overlay" onClick={() => setPaymentModalBooking(null)}>
-                <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
-                  <h2>Complete Payment</h2>
-                  <p className="active-job-note">
-                    Amount due: <strong>₹{paymentModalBooking.price}</strong>
-                  </p>
-
-                  <div className="filter-group full-width">
-                    <label>Payment Method</label>
-                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                      <option value="upi">UPI</option>
-                      <option value="cash">Cash</option>
-                    </select>
-                  </div>
-
-                  <div className="filter-group full-width">
-                    <label>Rate Your Worker</label>
-                    <select value={ratingGiven} onChange={(e) => setRatingGiven(Number(e.target.value))}>
-                      {[5, 4, 3, 2, 1].map((n) => (
-                        <option key={n} value={n}>{"★".repeat(n)} ({n})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="filter-group full-width">
-                    <label>Review (optional)</label>
-                    <textarea
-                      rows={3}
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      placeholder="How was the service?"
-                    />
-                  </div>
-
-                  <div className="booking-actions">
-                    <button className="action-btn secondary" onClick={() => setPaymentModalBooking(null)} disabled={submittingPayment}>
-                      Cancel
-                    </button>
-                    <button className="action-btn primary" onClick={handleSubmitPayment} disabled={submittingPayment}>
-                      {submittingPayment ? "Processing..." : "Pay & Submit Rating"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -854,6 +812,118 @@ function CustomerDashboard() {
           </div>
         )}
       </main>
+
+      {/* FLOATING ACTION BAR FOR MULTI-SELECT - MOVED OUTSIDE OF ANIMATED CONTAINERS */}
+      {selectedWorkerIds.size > 0 && activeTab === 'discover' && (
+        <div 
+          className="floating-action-bar fade-in"
+          style={{
+            position: 'fixed',
+            bottom: '30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10000,
+            backgroundColor: '#0f172a',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+          }}
+        >
+          <span>{selectedWorkerIds.size} of 3 maximum workers selected</span>
+          <button className="action-btn primary" onClick={handleRequestSelected} disabled={isRequesting}>
+            {isRequesting ? "Sending Requests..." : "Request Selected Workers"}
+          </button>
+        </div>
+      )}
+
+      {/* PAYMENT + RATING MODAL - MOVED OUTSIDE OF ANIMATED CONTAINERS */}
+      {paymentModalBooking && (
+        <div 
+          className="payment-modal-overlay" 
+          onClick={() => setPaymentModalBooking(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+        >
+          <div 
+            className="payment-modal" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              width: '90%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <h2>Complete Payment</h2>
+            <p className="active-job-note">
+              Amount due: <strong>₹{paymentModalBooking.price}</strong>
+            </p>
+
+            <div className="filter-group full-width">
+              <label>Payment Method</label>
+              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <option value="upi">UPI</option>
+                <option value="cash">Cash</option>
+              </select>
+            </div>
+
+            <div className="filter-group full-width">
+              <label>Rate Your Worker</label>
+              <select value={ratingGiven} onChange={(e) => setRatingGiven(Number(e.target.value))}>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>{"★".repeat(n)} ({n})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group full-width">
+              <label>Review (optional)</label>
+              <textarea
+                rows={3}
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="How was the service?"
+              />
+            </div>
+
+            <div className="booking-actions">
+              <button className="action-btn secondary" onClick={() => setPaymentModalBooking(null)} disabled={submittingPayment}>
+                Cancel
+              </button>
+              <button className="action-btn primary" onClick={handleSubmitPayment} disabled={submittingPayment}>
+                {submittingPayment ? "Processing..." : "Pay & Submit Rating"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`toast-notification ${toast.type} fade-in`}>
+          <span className="toast-icon">{toast.type === "error" ? "⚠️" : "✅"}</span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast(null)}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
