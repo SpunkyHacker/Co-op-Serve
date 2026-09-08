@@ -368,6 +368,25 @@
 /* =========================================================
    TAB 2: BOOKINGS
    ========================================================= */
+.bookings-section {
+  max-width: 800px;
+}
+
+.bookings-section + .bookings-section {
+  margin-top: 36px;
+}
+
+.bookings-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #60768b;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e9ee;
+}
+
 .bookings-container {
   display: flex;
   flex-direction: column;

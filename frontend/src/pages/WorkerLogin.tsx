@@ -31,10 +31,39 @@ function WorkerLogin() {
     if (error) {
       setAuthError(error.message);
       setIsLoading(false);
-    } else if (data.session) {
-      // Check user role if necessary, or simply navigate to the worker dashboard
-      navigate("/worker-dashboard");
+      return;
     }
+
+    if (!data.session) {
+      setAuthError("Could not start a session. Please try again.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Password match alone doesn't tell us which portal this account
+    // belongs to. Look up the role and reject anything that isn't
+    // "worker" so customer accounts can't land in the worker dashboard.
+    const { data: userRow, error: roleError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", data.session.user.id)
+      .maybeSingle();
+
+    if (roleError || !userRow) {
+      await supabase.auth.signOut();
+      setAuthError("We couldn't verify this account. Please try again.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (userRow.role !== "worker") {
+      await supabase.auth.signOut();
+      setAuthError("This account is registered as a customer. Please use Customer Login instead.");
+      setIsLoading(false);
+      return;
+    }
+
+    navigate("/worker-dashboard");
   };
 
   return (

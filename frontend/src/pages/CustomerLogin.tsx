@@ -18,7 +18,7 @@ function CustomerLogin() {
     setError("");
     setLoading(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -26,11 +26,41 @@ function CustomerLogin() {
     if (signInError) {
       setError(signInError.message);
       setLoading(false);
-    } else {
-      // Successful login automatically saves session in the browser.
-      // Redirect to the dashboard.
-      navigate("/customer-dashboard");
+      return;
     }
+
+    if (!signInData.session) {
+      setError("Could not start a session. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Password match alone doesn't tell us which portal this account
+    // belongs to. Look up the role and reject anything that isn't
+    // "customer" so worker accounts can't land in the customer dashboard.
+    const { data: userRow, error: roleError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", signInData.session.user.id)
+      .maybeSingle();
+
+    if (roleError || !userRow) {
+      await supabase.auth.signOut();
+      setError("We couldn't verify this account. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (userRow.role !== "customer") {
+      await supabase.auth.signOut();
+      setError("This account is registered as a worker. Please use Worker Login instead.");
+      setLoading(false);
+      return;
+    }
+
+    // Successful login automatically saves session in the browser.
+    // Redirect to the dashboard.
+    navigate("/customer-dashboard");
   };
 
   return (

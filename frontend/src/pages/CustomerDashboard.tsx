@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "./CustomerDashboard.css";
@@ -78,7 +79,23 @@ function CustomerDashboard() {
         .eq("id", session.user.id)
         .maybeSingle(); 
 
-      if (!error && data) setCustomerData(data);
+      if (error || !data) {
+        console.error("Failed to load user profile:", error);
+        await supabase.auth.signOut();
+        navigate("/customer-login");
+        return;
+      }
+
+      // Guard against a leftover/stale session from the worker portal
+      // (shared browser storage, direct URL visit, etc.) rendering a
+      // worker's account inside the customer dashboard.
+      if (data.role !== "customer") {
+        await supabase.auth.signOut();
+        navigate("/customer-login");
+        return;
+      }
+
+      setCustomerData(data);
 
       const { data: customerRow, error: customerErr } = await supabase
         .from("customers")
@@ -86,9 +103,14 @@ function CustomerDashboard() {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (!customerErr && customerRow) setCustomerId(customerRow.id);
-      else if (customerErr) console.error("Failed to resolve customer record:", customerErr);
+      if (customerErr || !customerRow) {
+        console.error("Failed to resolve customer record:", customerErr);
+        await supabase.auth.signOut();
+        navigate("/customer-login");
+        return;
+      }
 
+      setCustomerId(customerRow.id);
       setLoading(false);
     };
 
@@ -643,25 +665,34 @@ function CustomerDashboard() {
                 <p>Head to Discover Services to request a worker.</p>
               </div>
             ) : (
-              <div className="bookings-container">
-                {bookings.map((booking: any) => {
+              (() => {
+                // Bundle each booking with the derived display info once,
+                // then split into "needs attention" (pending / active /
+                // awaiting payment) vs "past" (done / cancelled / rejected /
+                // expired) so the list isn't one long unsorted wall of
+                // mixed-status cards.
+                const enriched = bookings.map((booking: any) => {
                   const workerName = booking.workers?.users?.name || "Worker";
-                  const tracking = trackingByBooking[booking.id];
-                  
-                  // Safely fallback to "pending" if the status is null in the database
                   const safeStatus = booking.status || "pending";
                   const isPending = safeStatus === "pending";
-                  
-                  // Calculate live countdown timer
+
                   let timeLeft = 0;
                   if (isPending && booking.expires_at) {
                     timeLeft = Math.max(0, Math.floor((new Date(booking.expires_at).getTime() - now) / 1000));
                   }
                   const isExpired = isPending && timeLeft === 0;
-
                   const displayStatus = isExpired ? "expired" : safeStatus;
                   const statusClass = (isExpired || ["rejected", "cancelled"].includes(safeStatus)) ? "cancelled" : safeStatus;
 
+                  return { booking, workerName, isPending, timeLeft, isExpired, displayStatus, statusClass };
+                });
+
+                const isPast = (d: string) => ["completed", "rejected", "cancelled", "expired"].includes(d);
+                const activeBookings = enriched.filter((b) => !isPast(b.displayStatus));
+                const pastBookings = enriched.filter((b) => isPast(b.displayStatus));
+
+                const renderCard = ({ booking, workerName, isPending, timeLeft, isExpired, displayStatus, statusClass }: any) => {
+                  const tracking = trackingByBooking[booking.id];
                   return (
                     <div key={booking.id} className="booking-card">
                       <div className="booking-header">
@@ -733,12 +764,42 @@ function CustomerDashboard() {
                       )}
                     </div>
                   );
-                })}
-              </div>
+                };
+
+                return (
+                  <>
+                    {activeBookings.length > 0 && (
+                      <div className="bookings-section">
+                        <h2 className="bookings-section-title">Needs your attention</h2>
+                        <div className="bookings-container">
+                          {activeBookings.map(renderCard)}
+                        </div>
+                      </div>
+                    )}
+
+                    {pastBookings.length > 0 && (
+                      <div className="bookings-section">
+                        <h2 className="bookings-section-title">Past bookings</h2>
+                        <div className="bookings-container">
+                          {pastBookings.map(renderCard)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()
             )}
 
-            {/* PAYMENT + RATING MODAL */}
-            {paymentModalBooking && (
+            {/* PAYMENT + RATING MODAL
+                Rendered via a portal straight into document.body.
+                Reason: this panel's ancestor (.fade-in) runs a transform-based
+                CSS animation, and any ancestor with a transform becomes the
+                containing block for position:fixed children — so the overlay
+                was being fixed relative to the (tall, scrollable) tab panel
+                instead of the viewport, which is why it required scrolling
+                to find. Portaling it out fixes that regardless of what CSS
+                animations exist on parents. */}
+            {paymentModalBooking && createPortal(
               <div className="payment-modal-overlay" onClick={() => setPaymentModalBooking(null)}>
                 <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
                   <h2>Complete Payment</h2>
@@ -782,7 +843,8 @@ function CustomerDashboard() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         )}

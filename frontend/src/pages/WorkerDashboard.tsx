@@ -453,6 +453,15 @@ setHistoryJobs(history);
             return;
           }
 
+          // Guard against a leftover/stale session from the customer
+          // portal (shared browser storage, direct URL visit, etc.)
+          // rendering a customer's account inside the worker dashboard.
+          if (data.role !== "worker") {
+            await supabase.auth.signOut();
+            navigate("/worker-login");
+            return;
+          }
+
           // `workers` is embedded via a to-one relation (one worker row per
           // user), so at runtime this is a single object - but Supabase's
           // generated types can't always prove that and infer it as an
@@ -465,7 +474,8 @@ setHistoryJobs(history);
               "Worker record was not found for this user."
             );
 
-            setLoading(false);
+            await supabase.auth.signOut();
+            navigate("/worker-login");
             return;
           }
 
