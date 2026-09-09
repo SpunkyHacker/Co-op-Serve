@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabaseClient";
 import "./CustomerDashboard.css";
 
@@ -21,7 +22,7 @@ function CustomerDashboard() {
   // Booking Request States (Discover tab)
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<Set<string>>(new Set());
   const [isRequesting, setIsRequesting] = useState(false);
-
+const { t, i18n } = useTranslation();
   // Live Timer State
   const [now, setNow] = useState(Date.now());
   
@@ -448,14 +449,15 @@ function CustomerDashboard() {
     }
   };
   // Mock data for services mapped to Database Categories
+// Mock data for services mapped to Database Categories
   const services = [
-    { id: 1, name: "Electrician", dbCategory: "Electrical", icon: "⚡", desc: "Wiring, repairs, and installations." },
-    { id: 2, name: "Plumber", dbCategory: "Plumbing", icon: "💧", desc: "Pipe leaks, fittings, and bathroom setups." },
-    { id: 3, name: "Carpenter", dbCategory: "Carpentry", icon: "🪚", desc: "Furniture repair, doors, and custom woodwork." },
-    { id: 4, name: "Cleaner", dbCategory: "Cleaning", icon: "🧹", desc: "Deep cleaning for homes and apartments." },
-    { id: 5, name: "Painter", dbCategory: "Painting", icon: "🎨", desc: "Interior and exterior wall painting." },
-    { id: 6, name: "Appliance Repair", dbCategory: "Appliance Repair", icon: "🔧", desc: "AC, Fridge, and Washing Machine fixing." },
-    { id: 7, name: "Gardener", dbCategory: "Gardening", icon: "🌱", desc: "Lawn care, planting, and landscaping." },
+    { id: 1, name: t('customerDashboard.serviceCards.electrician'), dbCategory: "Electrical", icon: "⚡", desc: t('customerDashboard.serviceCards.electricianDesc') },
+    { id: 2, name: t('customerDashboard.serviceCards.plumber'), dbCategory: "Plumbing", icon: "💧", desc: t('customerDashboard.serviceCards.plumberDesc') },
+    { id: 3, name: t('customerDashboard.serviceCards.carpenter'), dbCategory: "Carpentry", icon: "🪚", desc: t('customerDashboard.serviceCards.carpenterDesc') },
+    { id: 4, name: t('customerDashboard.serviceCards.cleaner'), dbCategory: "Cleaning", icon: "🧹", desc: t('customerDashboard.serviceCards.cleanerDesc') },
+    { id: 5, name: t('customerDashboard.serviceCards.painter'), dbCategory: "Painting", icon: "🎨", desc: t('customerDashboard.serviceCards.painterDesc') },
+    { id: 6, name: t('customerDashboard.serviceCards.appliance'), dbCategory: "Appliance Repair", icon: "🔧", desc: t('customerDashboard.serviceCards.applianceDesc') },
+    { id: 7, name: t('customerDashboard.serviceCards.gardener'), dbCategory: "Gardening", icon: "🌱", desc: t('customerDashboard.serviceCards.gardenerDesc') },
   ];
 
   const filteredServices = services.filter(service => 
@@ -474,21 +476,21 @@ function CustomerDashboard() {
   return (
     <div className="customer-dashboard-layout">
       {/* SIDEBAR NAVIGATION */}
-      <aside className="customer-sidebar">
+<aside className="customer-sidebar">
         <div className="customer-sidebar-brand">
           <div className="customer-brand-logo">CS</div>
-          <span>Co-op Serve</span>
+          <span>{t('customerDashboard.sidebar.brand')}</span>
         </div>
 
         <nav className="customer-sidebar-nav">
           <button className={`nav-btn ${activeTab === 'discover' ? 'active' : ''}`} onClick={() => { setActiveTab('discover'); handleBackToServices(); }}>
-            <span className="nav-icon">🔍</span> Discover Services
+            <span className="nav-icon">🔍</span> {t('customerDashboard.sidebar.discover')}
           </button>
           <button className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => setActiveTab('bookings')}>
-            <span className="nav-icon">📅</span> My Bookings
+            <span className="nav-icon">📅</span> {t('customerDashboard.sidebar.bookings')}
           </button>
           <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            <span className="nav-icon">👤</span> Profile Settings
+            <span className="nav-icon">👤</span> {t('customerDashboard.sidebar.profile')}
           </button>
         </nav>
 
@@ -496,29 +498,50 @@ function CustomerDashboard() {
           <div className="customer-mini-profile">
             <div className="avatar">{customerData?.name?.charAt(0) || "C"}</div>
             <div className="user-info">
-              <strong>{customerData?.name || "Customer"}</strong>
-              <span>{customerData?.role || "Member"}</span>
+              <strong>{customerData?.name || t('customerDashboard.sidebar.defaultName')}</strong>
+              <span>{customerData?.role || t('customerDashboard.sidebar.defaultRole')}</span>
             </div>
           </div>
-          <button className="customer-logout-btn" onClick={handleLogout}>Sign Out</button>
+          <button className="customer-logout-btn" onClick={handleLogout}>{t('customerDashboard.sidebar.signOut')}</button>
         </div>
       </aside>
 
       <main className="customer-main-content">
-        <header className="customer-content-header">
+<header className="customer-content-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1>
-            {activeTab === 'discover' && !selectedCategory && "Discover Trusted Workers"}
-            {activeTab === 'discover' && selectedCategory && `Available ${selectedCategory}s`}
-            {activeTab === 'bookings' && "Your Active & Past Bookings"}
-            {activeTab === 'profile' && "Manage Your Profile"}
+            {activeTab === 'discover' && !selectedCategory && t('customerDashboard.header.discoverTitle')}
+            {activeTab === 'discover' && selectedCategory && t('customerDashboard.header.availableCategory', { category: selectedCategory })}
+            {activeTab === 'bookings' && t('customerDashboard.header.bookingsTitle')}
+            {activeTab === 'profile' && t('customerDashboard.header.profileTitle')}
           </h1>
           
-          {activeTab === 'discover' && !selectedCategory && (
-            <div className="customer-search-bar">
-              <span className="search-icon">🔍</span>
-              <input type="text" placeholder="What do you need help with?" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {activeTab === 'discover' && !selectedCategory && (
+              <div className="customer-search-bar">
+                <span className="search-icon">🔍</span>
+                <input type="text" placeholder={t('customerDashboard.header.searchPlaceholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              </div>
+            )}
+            
+            {/* LANGUAGE TOGGLE */}
+            <select 
+              value={i18n.language} 
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              style={{ 
+                padding: '8px 12px', 
+                borderRadius: '8px', 
+                border: '1px solid #e5e9ee',
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: '#0f172a'
+              }}
+            >
+              <option value="en">EN</option>
+              <option value="ta">TA</option>
+              <option value="hi">HI</option>
+            </select>
+          </div>
         </header>
 
         {activeTab === 'discover' && (
@@ -533,7 +556,7 @@ function CustomerDashboard() {
                     <h3>{service.name}</h3>
                     <p>{service.desc}</p>
                     <button className="book-now-btn" onClick={() => handleFindWorker(service.dbCategory)}>
-                      Find a {service.name}
+                      {t('customerDashboard.services.findBtn', { service: service.name })}
                     </button>
                   </div>
                 ))}
@@ -549,46 +572,46 @@ function CustomerDashboard() {
                 {/* FILTER BAR */}
                 <div className="worker-filters">
                   <div className="filter-group">
-                    <label>Sort By</label>
+                    <label>{t('customerDashboard.filters.sortBy')}</label>
                     <select value={sortPref} onChange={(e) => setSortPref(e.target.value)}>
-                      <option value="recommended">Recommended</option>
-                      <option value="premium">Highest Rated</option>
-                      <option value="budget">Lowest Price</option>
-                      <option value="nearest">Nearest</option>
+                      <option value="recommended">{t('customerDashboard.filters.sortRecommended')}</option>
+                      <option value="premium">{t('customerDashboard.filters.sortPremium')}</option>
+                      <option value="budget">{t('customerDashboard.filters.sortBudget')}</option>
+                      <option value="nearest">{t('customerDashboard.filters.sortNearest')}</option>
                     </select>
                   </div>
 
                   <div className="filter-group">
-                    <label>Max Price (₹/hr)</label>
-                    <input type="number" placeholder="Any" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
+                    <label>{t('customerDashboard.filters.maxPrice')}</label>
+                    <input type="number" placeholder={t('customerDashboard.filters.any')} value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
                   </div>
 
                   <div className="filter-group">
-                    <label>Gender</label>
+                    <label>{t('customerDashboard.filters.gender')}</label>
                     <select value={reqGender} onChange={(e) => setReqGender(e.target.value)}>
-                      <option value="">Any</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
+                      <option value="">{t('customerDashboard.filters.any')}</option>
+                      <option value="male">{t('customerDashboard.filters.male')}</option>
+                      <option value="female">{t('customerDashboard.filters.female')}</option>
                     </select>
                   </div>
 
                   <div className="filter-group checkbox">
                     <label>
                       <input type="checkbox" checked={mustBeVerified} onChange={(e) => setMustBeVerified(e.target.checked)} />
-                      Verified Only
+                      {t('customerDashboard.filters.verifiedOnly')}
                     </label>
                   </div>
 
                   <button className="action-btn secondary apply-filters-btn" onClick={() => handleFindWorker()}>
-                    Apply Filters
+                    {t('customerDashboard.filters.applyFilters')}
                   </button>
                 </div>
-
+                {/* RESULTS */}
                 {/* RESULTS */}
                 {loadingWorkers ? (
                   <div className="worker-list-loading">
                     <div className="spinner"></div>
-                    <p>Finding verified {selectedCategory}s near you...</p>
+                    <p>{t('customerDashboard.workers.finding', { category: selectedCategory })}</p>
                   </div>
                 ) : (
                   <div className="worker-profiles-grid">
@@ -605,22 +628,22 @@ function CustomerDashboard() {
                                 {worker.is_verified && <span className="verified-badge">✓</span>}
                               </h3>
                               <span className="worker-location">
-                                📍 {worker.distance_km} km away (~{worker.eta_mins} mins)
+                                📍 {t('customerDashboard.workers.away', { distance: worker.distance_km, eta: worker.eta_mins })}
                               </span>
                             </div>
                           </div>
                           
                           <div className="worker-stats">
                             <div className="stat">
-                              <span className="stat-label">Rating</span>
-                              <span className="stat-value rating">★ {worker.avg_rating || "New"}</span>
+                              <span className="stat-label">{t('customerDashboard.workers.rating')}</span>
+                              <span className="stat-value rating">★ {worker.avg_rating || t('customerDashboard.workers.new')}</span>
                             </div>
                             <div className="stat">
-                              <span className="stat-label">Jobs</span>
+                              <span className="stat-label">{t('customerDashboard.workers.jobs')}</span>
                               <span className="stat-value">{worker.total_jobs_completed || 0}</span>
                             </div>
                             <div className="stat">
-                              <span className="stat-label">Rate</span>
+                              <span className="stat-label">{t('customerDashboard.workers.rate')}</span>
                               <span className="stat-value">₹{worker.hourly_rate}/hr</span>
                             </div>
                           </div>
@@ -638,15 +661,15 @@ function CustomerDashboard() {
                               setSelectedWorkerIds(next);
                             }}
                           >
-                            {selectedWorkerIds.has(worker.worker_id) ? "Selected ✓" : "Select Worker"}
+                            {selectedWorkerIds.has(worker.worker_id) ? t('customerDashboard.workers.selected') : t('customerDashboard.workers.select')}
                           </button>
                         </div>
                       ))
                     ) : (
                       <div className="no-workers-state">
                         <span className="no-workers-icon">🔍</span>
-                        <h3>No {selectedCategory}s match your criteria.</h3>
-                        <p>Try adjusting your filters or checking back later.</p>
+                        <h3>{t('customerDashboard.workers.noMatch', { category: selectedCategory })}</h3>
+                        <p>{t('customerDashboard.workers.tryAdjusting')}</p>
                       </div>
                     )}
                   </div>
@@ -657,26 +680,22 @@ function CustomerDashboard() {
         )}
 
         {/* MY BOOKINGS TAB */}
+        {/* MY BOOKINGS TAB */}
         {activeTab === 'bookings' && (
           <div className="customer-tab-panel fade-in">
             {bookingsLoading && bookings.length === 0 ? (
               <div className="worker-list-loading">
                 <div className="spinner"></div>
-                <p>Loading your bookings...</p>
+                <p>{t('customerDashboard.bookings.loading')}</p>
               </div>
             ) : bookings.length === 0 ? (
               <div className="no-workers-state">
                 <span className="no-workers-icon">📅</span>
-                <h3>No bookings yet.</h3>
-                <p>Head to Discover Services to request a worker.</p>
+                <h3>{t('customerDashboard.bookings.noBookings')}</h3>
+                <p>{t('customerDashboard.bookings.headToDiscover')}</p>
               </div>
             ) : (
               (() => {
-                // Bundle each booking with the derived display info once,
-                // then split into "needs attention" (pending / active /
-                // awaiting payment) vs "past" (done / cancelled / rejected /
-                // expired) so the list isn't one long unsorted wall of
-                // mixed-status cards.
                 const enriched = bookings.map((booking: any) => {
                   const workerName = booking.workers?.users?.name || "Worker";
                   const safeStatus = booking.status || "pending";
@@ -710,7 +729,7 @@ function CustomerDashboard() {
 
                       <div className="booking-details">
                         <div className="booking-service-info">
-                          <h3>{booking.services?.category || "Service Request"}</h3>
+                          <h3>{booking.services?.category || t('customerDashboard.bookings.serviceRequest')}</h3>
                           <p>{workerName}</p>
                         </div>
                         <div className="booking-price">₹{booking.price}</div>
@@ -719,10 +738,10 @@ function CustomerDashboard() {
                       {isPending && !isExpired && (
                         <div className="pending-timer-section">
                           <p className="active-job-note" style={{ margin: 0 }}>
-                            Waiting for response... Expires in <strong style={{color: '#c44848'}}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
+                            {t('customerDashboard.bookings.waiting')} <strong style={{color: '#c44848'}}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
                           </p>
                           <button className="action-btn danger" onClick={() => handleCancelSingle(booking.id)}>
-                            Cancel Request
+                            {t('customerDashboard.bookings.cancelRequest')}
                           </button>
                         </div>
                       )}
@@ -730,7 +749,7 @@ function CustomerDashboard() {
                       {["accepted", "traveling", "working"].includes(displayStatus) && (
                         <div className="active-tracking-box" style={{ background: '#f5f8fb', padding: '16px', borderRadius: '8px', border: '1px solid #e5e9ee', marginTop: '16px' }}>
                           <p className="active-job-note" style={{ margin: '0 0 12px 0', fontWeight: 600, color: '#087c73' }}>
-                            {workerName} has accepted your request and is on the way!
+                            {t('customerDashboard.bookings.accepted', { workerName: workerName })}
                           </p>
                           
                           {tracking?.worker_live_lat && tracking?.worker_live_lng ? (
@@ -741,11 +760,11 @@ function CustomerDashboard() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              🗺️ View Live Worker Location on Map
+                              {t('customerDashboard.bookings.viewMap')}
                             </a>
                           ) : (
                             <p style={{ fontSize: '12px', color: '#60768b', margin: 0 }}>
-                              Waiting for worker's live GPS coordinates...
+                              {t('customerDashboard.bookings.waitingGps')}
                             </p>
                           )}
                         </div>
@@ -754,19 +773,19 @@ function CustomerDashboard() {
                       {displayStatus === "completed_pending_payment" && (
                         <div className="booking-actions">
                           <button className="action-btn primary" onClick={() => openPaymentModal(booking)}>
-                            Complete & Pay
+                            {t('customerDashboard.bookings.completePay')}
                           </button>
                         </div>
                       )}
 
                       {["rejected", "cancelled", "expired"].includes(displayStatus) && (
                         <p className="active-job-note">
-                          This request was not completed.
+                          {t('customerDashboard.bookings.notCompleted')}
                         </p>
                       )}
 
                       {displayStatus === "completed" && (
-                        <p className="active-job-note">Job completed and paid.</p>
+                        <p className="active-job-note">{t('customerDashboard.bookings.completed')}</p>
                       )}
                     </div>
                   );
@@ -776,14 +795,14 @@ function CustomerDashboard() {
                   <div className="bookings-list">
                     {activeBookings.length > 0 && (
                       <>
-                        <h3 className="booking-section-title">Active bookings</h3>
+                        <h3 className="booking-section-title">{t('customerDashboard.bookings.activeTitle')}</h3>
                         {activeBookings.map(renderCard)}
                       </>
                     )}
 
                     {pastBookings.length > 0 && (
                       <>
-                        <h3 className="booking-section-title">Past bookings</h3>
+                        <h3 className="booking-section-title">{t('customerDashboard.bookings.pastTitle')}</h3>
                         {pastBookings.map(renderCard)}
                       </>
                     )}
@@ -794,6 +813,7 @@ function CustomerDashboard() {
           </div>
         )}
 
+        {/* PROFILE TAB */}
         {/* PROFILE TAB */}
         {activeTab === 'profile' && (
           <div className="customer-tab-panel fade-in">
@@ -813,9 +833,9 @@ function CustomerDashboard() {
                   {customerData?.name?.charAt(0) || "C"}
                 </div>
                 <div>
-                  <h2 style={{ margin: 0 }}>{customerData?.name || "Customer Profile"}</h2>
+                  <h2 style={{ margin: 0 }}>{customerData?.name || t('customerDashboard.profile.defaultTitle')}</h2>
                   <span style={{ color: '#64748b', textTransform: 'capitalize' }}>
-                    {customerData?.role || "Member"} Account
+                    {t('customerDashboard.profile.account', { role: customerData?.role || t('customerDashboard.sidebar.defaultRole') })}
                   </span>
                 </div>
               </div>
@@ -823,34 +843,34 @@ function CustomerDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div className="info-group">
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Full Name
+                    {t('customerDashboard.profile.fullName')}
                   </label>
                   <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
-                    {customerData?.name || "Not provided"}
+                    {customerData?.name || t('customerDashboard.profile.notProvided')}
                   </div>
                 </div>
 
                 <div className="info-group">
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Email Address
+                    {t('customerDashboard.profile.email')}
                   </label>
                   <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
-                    {customerData?.email || "Not provided"}
+                    {customerData?.email || t('customerDashboard.profile.notProvided')}
                   </div>
                 </div>
 
                 <div className="info-group">
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Phone Number
+                    {t('customerDashboard.profile.phone')}
                   </label>
                   <div style={{ fontSize: '1.1rem', color: '#0f172a' }}>
-                    {customerData?.phone || "Not provided"}
+                    {customerData?.phone || t('customerDashboard.profile.notProvided')}
                   </div>
                 </div>
                 
                 <div className="info-group">
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Account ID
+                    {t('customerDashboard.profile.accountId')}
                   </label>
                   <div style={{ fontSize: '0.9rem', color: '#64748b', fontFamily: 'monospace' }}>
                     {customerData?.id || "—"}
@@ -862,6 +882,7 @@ function CustomerDashboard() {
         )}
       </main>
 
+      {/* FLOATING ACTION BAR FOR MULTI-SELECT - MOVED OUTSIDE OF ANIMATED CONTAINERS */}
       {/* FLOATING ACTION BAR FOR MULTI-SELECT - MOVED OUTSIDE OF ANIMATED CONTAINERS */}
       {selectedWorkerIds.size > 0 && activeTab === 'discover' && (
         <div 
@@ -882,9 +903,9 @@ function CustomerDashboard() {
             boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
           }}
         >
-          <span>{selectedWorkerIds.size} of 3 maximum workers selected</span>
+          <span>{t('customerDashboard.floatingBar.selectedCount', { count: selectedWorkerIds.size })}</span>
           <button className="action-btn primary" onClick={handleRequestSelected} disabled={isRequesting}>
-            {isRequesting ? "Sending Requests..." : "Request Selected Workers"}
+            {isRequesting ? t('customerDashboard.floatingBar.sending') : t('customerDashboard.floatingBar.requestBtn')}
           </button>
         </div>
       )}
@@ -921,21 +942,21 @@ function CustomerDashboard() {
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
             }}
           >
-            <h2>Complete Payment</h2>
+            <h2>{t('customerDashboard.paymentModal.title')}</h2>
             <p className="active-job-note">
-              Amount due: <strong>₹{paymentModalBooking.price}</strong>
+              {t('customerDashboard.paymentModal.amountDue')} <strong>₹{paymentModalBooking.price}</strong>
             </p>
 
             <div className="filter-group full-width">
-              <label>Payment Method</label>
+              <label>{t('customerDashboard.paymentModal.paymentMethod')}</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="upi">UPI</option>
-                <option value="cash">Cash</option>
+                <option value="upi">{t('customerDashboard.paymentModal.upi')}</option>
+                <option value="cash">{t('customerDashboard.paymentModal.cash')}</option>
               </select>
             </div>
 
             <div className="filter-group full-width">
-              <label>Rate Your Worker</label>
+              <label>{t('customerDashboard.paymentModal.rateWorker')}</label>
               <select value={ratingGiven} onChange={(e) => setRatingGiven(Number(e.target.value))}>
                 {[5, 4, 3, 2, 1].map((n) => (
                   <option key={n} value={n}>{"★".repeat(n)} ({n})</option>
@@ -944,21 +965,21 @@ function CustomerDashboard() {
             </div>
 
             <div className="filter-group full-width">
-              <label>Review (optional)</label>
+              <label>{t('customerDashboard.paymentModal.review')}</label>
               <textarea
                 rows={3}
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                placeholder="How was the service?"
+                placeholder={t('customerDashboard.paymentModal.reviewPlaceholder')}
               />
             </div>
 
             <div className="booking-actions">
               <button className="action-btn secondary" onClick={() => setPaymentModalBooking(null)} disabled={submittingPayment}>
-                Cancel
+                {t('customerDashboard.paymentModal.cancel')}
               </button>
               <button className="action-btn primary" onClick={handleSubmitPayment} disabled={submittingPayment}>
-                {submittingPayment ? "Processing..." : "Pay & Submit Rating"}
+                {submittingPayment ? t('customerDashboard.paymentModal.processing') : t('customerDashboard.paymentModal.paySubmit')}
               </button>
             </div>
           </div>

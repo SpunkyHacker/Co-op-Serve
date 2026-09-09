@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "./WorkerDashboard.css";
+import { useTranslation } from "react-i18next";
 
 type Status = "Available" | "Busy" | "Do not disturb" | "Appear offline";
 type Tab = "jobs" | "active" | "history" | "payments" | "profile";
@@ -32,7 +33,7 @@ const API_BASE = (
 
 function WorkerDashboard() {
   const navigate = useNavigate();
-
+const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
 
   // ==========================================================
@@ -811,6 +812,12 @@ setHistoryJobs(history);
       }
     };
 
+    const statusDisplayMap: Record<Status, string> = {
+    "Available": t('workerDashboard.sidebar.status.available'),
+    "Busy": t('workerDashboard.sidebar.sidebar.status.busy'),
+    "Do not disturb": t('workerDashboard.sidebar.status.dnd'),
+    "Appear offline": t('workerDashboard.sidebar.status.offline')
+  };
   // ==========================================================
   // STATUS MENU
   // ==========================================================
@@ -1364,201 +1371,84 @@ setHistoryJobs(history);
       ===================================================== */}
 
       <aside className="worker-sidebar">
-
-        <div className="worker-sidebar-brand">
-          <div className="worker-brand-logo">
-            CS
+        <div className="worker-sidebar-brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="worker-brand-logo">CS</div>
+            <span>{t('workerDashboard.sidebar.brand')}</span>
           </div>
-
-          <span>
-            Co-op Serve
-          </span>
+          
+  {/* LANGUAGE TOGGLE */}
+          <select 
+            value={i18n.language} 
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            style={{ 
+              padding: '6px', 
+              borderRadius: '6px', 
+              background: '#1e293b', 
+              color: '#fff', 
+              border: '1px solid #475569',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+          >
+            <option value="en" style={{ background: '#1e293b', color: '#fff' }}>EN</option>
+            <option value="ta" style={{ background: '#1e293b', color: '#fff' }}>TA</option>
+            <option value="hi" style={{ background: '#1e293b', color: '#fff' }}>HI</option>
+          </select>
         </div>
 
-        {/* ACCOUNT */}
-
         <div className="worker-sidebar-account">
-
           <div className="worker-mini-profile">
-
-            <div className="worker-mini-avatar">
-              {workerName
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
+            <div className="worker-mini-avatar">{workerName.charAt(0).toUpperCase()}</div>
             <div className="worker-user-info">
-              <strong>
-                {workerName}
-              </strong>
-
-              <span>
-                {skill}
-              </span>
+              <strong>{workerName}</strong>
+              <span>{skill}</span>
             </div>
-
           </div>
 
-          {/* STATUS */}
-
           <div className="worker-status-wrapper">
-
             <button
               className={`worker-current-status ${statusClass}`}
-              onClick={() =>
-                setStatusMenuOpen(
-                  (value) =>
-                    !value
-                )
-              }
-              disabled={
-                statusSaving
-              }
+              onClick={() => setStatusMenuOpen((value) => !value)}
+              disabled={statusSaving}
             >
               <span className="status-dot"></span>
-
-              <span>
-                {statusSaving
-                  ? "Saving..."
-                  : status}
-              </span>
-
-              <span className="status-chevron">
-                ▼
-              </span>
+              <span>{statusSaving ? t('workerDashboard.sidebar.status.saving') : statusDisplayMap[status]}</span>
+              <span className="status-chevron">▼</span>
             </button>
 
             {statusMenuOpen && (
               <div className="worker-status-menu">
-
-                {(
-                  [
-                    "Available",
-                    "Busy",
-                    "Do not disturb",
-                    "Appear offline",
-                  ] as Status[]
-                ).map(
-                  (item) => (
-                    <button
-                      key={item}
-                      className="worker-status-option"
-                      onClick={() =>
-                        selectStatus(
-                          item
-                        )
-                      }
-                    >
-
-                      <span
-                        className={`status-option-dot ${item
-                          .toLowerCase()
-                          .replaceAll(
-                            " ",
-                            "-"
-                          )}`}
-                      />
-
-                      <span>
-                        {item}
-                      </span>
-
-                      {status ===
-                        item && (
-                        <span className="status-check">
-                          ✓
-                        </span>
-                      )}
-
-                    </button>
-                  )
-                )}
-
+                {(["Available", "Busy", "Do not disturb", "Appear offline"] as Status[]).map((item) => (
+                  <button key={item} className="worker-status-option" onClick={() => selectStatus(item)}>
+                    <span className={`status-option-dot ${item.toLowerCase().replaceAll(" ", "-")}`} />
+                    <span>{statusDisplayMap[item]}</span>
+                    {status === item && <span className="status-check">✓</span>}
+                  </button>
+                ))}
               </div>
             )}
-
           </div>
 
-          {/* SIGN OUT */}
-
-          <button
-            className="worker-logout-btn"
-            onClick={
-              handleSignOut
-            }
-          >
-            Sign Out
+          <button className="worker-logout-btn" onClick={handleSignOut}>
+            {t('workerDashboard.sidebar.signOut')}
           </button>
-
         </div>
 
-        {/* NAVIGATION */}
-
         <nav className="worker-sidebar-nav">
-
           {[
-            [
-              "jobs",
-              "🔎",
-              "Find Jobs",
-            ],
-
-            [
-              "active",
-              "📋",
-              "My Jobs",
-            ],
-
-            [
-              "history",
-              "📜",
-              "Work History",
-            ],
-
-            [
-              "payments",
-              "💰",
-              "Payments",
-            ],
-
-            [
-              "profile",
-              "👤",
-              "Profile",
-            ],
-          ].map(
-            ([
-              tab,
-              icon,
-              label,
-            ]) => (
-              <button
-                key={tab}
-                className={`worker-nav-btn ${
-                  activeTab ===
-                  tab
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() =>
-                  setActiveTab(
-                    tab as Tab
-                  )
-                }
-              >
-
-                <span className="worker-nav-icon">
-                  {icon}
-                </span>
-
-                {label}
-
-              </button>
-            )
-          )}
-
+            ["jobs", "🔎", t('workerDashboard.sidebar.tabs.jobs')],
+            ["active", "📋", t('workerDashboard.sidebar.tabs.active')],
+            ["history", "📜", t('workerDashboard.sidebar.tabs.history')],
+            ["payments", "💰", t('workerDashboard.sidebar.tabs.payments')],
+            ["profile", "👤", t('workerDashboard.sidebar.tabs.profile')],
+          ].map(([tab, icon, label]) => (
+            <button key={tab} className={`worker-nav-btn ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab as Tab)}>
+              <span className="worker-nav-icon">{icon}</span>
+              {label}
+            </button>
+          ))}
         </nav>
-
       </aside>
 
       {/* =====================================================
@@ -1568,1255 +1458,514 @@ setHistoryJobs(history);
       <main className="worker-main-content">
 
         <header className="worker-content-header">
-
           <div>
-
             <h1>
-              {activeTab ===
-                "jobs" &&
-                `Good evening, ${workerName}`}
-
-              {activeTab ===
-                "active" &&
-                "My Jobs"}
-
-              {activeTab ===
-                "history" &&
-                "Work History"}
-
-              {activeTab ===
-                "payments" &&
-                "Payment History"}
-
-              {activeTab ===
-                "profile" &&
-                "Manage Your Profile"}
+              {activeTab === "jobs" && t('workerDashboard.header.greeting', { name: workerName })}
+              {activeTab === "active" && t('workerDashboard.header.myJobs')}
+              {activeTab === "history" && t('workerDashboard.header.workHistory')}
+              {activeTab === "payments" && t('workerDashboard.header.paymentHistory')}
+              {activeTab === "profile" && t('workerDashboard.header.manageProfile')}
             </h1>
 
-            {activeTab ===
-              "jobs" && (
+            {activeTab === "jobs" && (
               <p>
-                {status ===
-                "Available"
-                  ? `You're available for nearby ${String(
-                      skill
-                    ).toLowerCase()} jobs.`
-                  : "You're not currently receiving new job alerts."}
+                {status === "Available"
+                  ? t('workerDashboard.header.availableText', { skill: String(skill).toLowerCase() })
+                  : t('workerDashboard.header.pausedText')}
               </p>
             )}
-
           </div>
-
-         
-
         </header>
 
         {/* ===================================================
             FIND JOBS
         =================================================== */}
-
-        {activeTab ===
-          "jobs" && (
+        {activeTab === "jobs" && (
           <div className="worker-tab-panel fade-in">
-
             <section className="worker-availability-banner">
-
               <div className="availability-banner-left">
-
-                <div
-                  className={`large-status-dot ${statusClass}`}
-                />
-
+                <div className={`large-status-dot ${statusClass}`} />
                 <div>
-
-                  <strong>
-                    {status}
-                  </strong>
-
+                  <strong>{statusDisplayMap[status]}</strong>
                   <span>
-                    {status ===
-                    "Available"
-                      ? "Receiving nearby job alerts"
-                      : "New job alerts are paused"}
+                    {status === "Available"
+                      ? t('workerDashboard.jobsTab.receivingAlerts')
+                      : t('workerDashboard.jobsTab.alertsPaused')}
                   </span>
-
                 </div>
-
               </div>
-
-              <button
-                className="availability-manage-btn"
-                onClick={() =>
-                  setStatusMenuOpen(
-                    true
-                  )
-                }
-              >
-                Change status
+              <button className="availability-manage-btn" onClick={() => setStatusMenuOpen(true)}>
+                {t('workerDashboard.jobsTab.changeStatus')}
               </button>
-
             </section>
 
             {locationError && (
               <div className="worker-location-warning">
-                <strong>
-                  Location:
-                </strong>{" "}
-                {locationError}
+                <strong>{t('workerDashboard.jobsTab.location')}</strong> {locationError}
               </div>
             )}
 
             {jobsError && (
               <div className="worker-location-warning">
-                <strong>
-                  Jobs:
-                </strong>{" "}
-                {jobsError}
+                <strong>{t('workerDashboard.jobsTab.jobs')}</strong> {jobsError}
               </div>
             )}
 
             <section className="nearby-jobs-section">
-
               <div className="jobs-heading">
-
                 <div>
-
-                  <h2>
-                    Nearby Jobs
-                  </h2>
-
+                  <h2>{t('workerDashboard.jobsTab.nearbyJobs')}</h2>
                   <p>
                     {jobsLoading
-                      ? "Checking for nearby jobs..."
+                      ? t('workerDashboard.jobsTab.checking')
                       : location
-                      ? `${jobs.length} matching jobs within your ${serviceRadius} km service radius`
-                      : "Waiting for your location"}
+                      ? t('workerDashboard.jobsTab.matchingJobs', { count: jobs.length, radius: serviceRadius })
+                      : t('workerDashboard.jobsTab.waitingLocation')}
                   </p>
-
                 </div>
-
-                <span className="radius-pill">
-                  {serviceRadius} km radius
-                </span>
-
+                <span className="radius-pill">{serviceRadius} km</span>
               </div>
 
-              {jobs.length >
-              0 ? (
+              {jobs.length > 0 ? (
                 <div className="worker-jobs-list">
-
-                  {jobs.map(
-                    (job) => (
-                      <div
-                        className="job-request-card"
-                        key={
-                          job.booking_id
-                        }
-                      >
-
-                        <h3 className="job-request-title">
-                          {job.title}
-                        </h3>
-
-                        <div className="job-request-details">
-
-                          <div className="job-detail-box">
-                            <small>
-                              Customer
-                            </small>
-                            <strong>
-                              {job.customer}
-                            </strong>
-                          </div>
-
-                          <div className="job-detail-box">
-                            <small>
-                              Price
-                            </small>
-                            <strong>
-                              ₹{job.price}
-                            </strong>
-                          </div>
-
-                          <div className="job-detail-box">
-                            <small>
-                              Distance
-                            </small>
-                            <strong>
-                              {job.distance_km} km
-                            </strong>
-                          </div>
-
+                  {jobs.map((job) => (
+                    <div className="job-request-card" key={job.booking_id}>
+                      <h3 className="job-request-title">{job.title}</h3>
+                      <div className="job-request-details">
+                        <div className="job-detail-box">
+                          <small>{t('workerDashboard.jobsTab.customer')}</small>
+                          <strong>{job.customer}</strong>
                         </div>
-
-                        <div className="job-request-actions">
-
-                          <button
-                            className="action-btn secondary"
-                            disabled={
-                              respondingId ===
-                              job.booking_id
-                            }
-                            onClick={() =>
-                              respondToJob(
-                                job,
-                                "reject"
-                              )
-                            }
-                          >
-                            Reject
-                          </button>
-
-                          <button
-                            className="action-btn primary"
-                            disabled={
-                              respondingId ===
-                              job.booking_id
-                            }
-                            onClick={() =>
-                              respondToJob(
-                                job,
-                                "accept"
-                              )
-                            }
-                          >
-                            {respondingId ===
-                            job.booking_id
-                              ? "Processing..."
-                              : "Approve"}
-                          </button>
-
+                        <div className="job-detail-box">
+                          <small>{t('workerDashboard.jobsTab.price')}</small>
+                          <strong>₹{job.price}</strong>
                         </div>
-
+                        <div className="job-detail-box">
+                          <small>{t('workerDashboard.jobsTab.distance')}</small>
+                          <strong>{job.distance_km} km</strong>
+                        </div>
                       </div>
-                    )
-                  )}
-
+                      <div className="job-request-actions">
+                        <button
+                          className="action-btn secondary"
+                          disabled={respondingId === job.booking_id}
+                          onClick={() => respondToJob(job, "reject")}
+                        >
+                          {t('workerDashboard.jobsTab.reject')}
+                        </button>
+                        <button
+                          className="action-btn primary"
+                          disabled={respondingId === job.booking_id}
+                          onClick={() => respondToJob(job, "accept")}
+                        >
+                          {respondingId === job.booking_id ? t('workerDashboard.jobsTab.processing') : t('workerDashboard.jobsTab.approve')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="recent-empty">
-
-                  <div className="empty-icon">
-                    🔎
-                  </div>
-
-                  <h3>
-                    No matching jobs nearby
-                  </h3>
-
+                  <div className="empty-icon">🔎</div>
+                  <h3>{t('workerDashboard.jobsTab.noMatching')}</h3>
                   <p>
-                    {status ===
-                    "Available"
-                      ? `We'll check again automatically. Your current service radius is ${serviceRadius} km.`
-                      : "Change your status to Available to receive job alerts."}
+                    {status === "Available"
+                      ? t('workerDashboard.jobsTab.checkAgain', { radius: serviceRadius })
+                      : t('workerDashboard.jobsTab.changeToAvailable')}
                   </p>
-
                 </div>
               )}
-
             </section>
 
             {/* RECENT WORK */}
-
             <section className="recent-work-section">
-
               <div className="section-heading">
-
                 <div>
-
-                  <h2>
-                    Recent Work
-                  </h2>
-
-                  <p>
-                    Your latest completed jobs
-                  </p>
-
+                  <h2>{t('workerDashboard.jobsTab.recentWork')}</h2>
+                  <p>{t('workerDashboard.jobsTab.latestCompleted')}</p>
                 </div>
-
-                <button
-                  className="text-link-btn"
-                  onClick={() =>
-                    setActiveTab(
-                      "history"
-                    )
-                  }
-                >
-                  View all →
+                <button className="text-link-btn" onClick={() => setActiveTab("history")}>
+                  {t('workerDashboard.jobsTab.viewAll')}
                 </button>
-
               </div>
 
               <div className="recent-work-list">
-
-                {historyJobs.length >
-                0 ? (
-                  historyJobs
-                    .slice(0, 5)
-                    .map(
-                      (
-                        job: any
-                      ) => (
-                        <div
-                          className="recent-work-row"
-                          key={
-                            job.id
-                          }
-                        >
-
-                          <div className="recent-work-icon">
-                            ✓
-                          </div>
-
-                          <div className="recent-work-main">
-
-                            <strong>
-                              {job.service_id ||
-                                "Completed Service"}
-                            </strong>
-
-                            <span>
-                              {job.customers
-                                ?.users
-                                ?.name ||
-                                "Customer"}
-                            </span>
-
-                          </div>
-
-                          <span className="completed-pill">
-                            Completed
-                          </span>
-
-                          <strong>
-                            ₹
-                            {
-                              job.price ||
-                              0
-                            }
-                          </strong>
-
-                        </div>
-                      )
-                    )
+                {historyJobs.length > 0 ? (
+                  historyJobs.slice(0, 5).map((job: any) => (
+                    <div className="recent-work-row" key={job.id}>
+                      <div className="recent-work-icon">✓</div>
+                      <div className="recent-work-main">
+                        <strong>{job.service_id || t('workerDashboard.jobsTab.completedService')}</strong>
+                        <span>{job.customers?.users?.name || t('workerDashboard.jobsTab.customer')}</span>
+                      </div>
+                      <span className="completed-pill">{t('workerDashboard.jobsTab.completed')}</span>
+                      <strong>₹{job.price || 0}</strong>
+                    </div>
+                  ))
                 ) : (
-                  <div className="recent-empty">
-                    No completed work yet.
-                  </div>
+                  <div className="recent-empty">{t('workerDashboard.jobsTab.noCompletedWork')}</div>
                 )}
-
               </div>
-
             </section>
-
           </div>
         )}
 
         {/* ===================================================
             ACTIVE JOB
         =================================================== */}
-
-        {activeTab ===
-          "active" && (
+        {activeTab === "active" && (
           <div className="worker-tab-panel fade-in">
-
             {activeJob ? (
               <section className="active-job-card">
-
                 <div className="section-heading">
-
                   <div>
-                    <h2>
-                      Active Job
-                    </h2>
-
-                    <p>
-                      Your current service request
-                    </p>
+                    <h2>{t('workerDashboard.activeTab.title')}</h2>
+                    <p>{t('workerDashboard.activeTab.subtitle')}</p>
                   </div>
-
-                  <span className="active-pill">
-                    {activeJob.status}
-                  </span>
-
+                  <span className="active-pill">{activeJob.status}</span>
                 </div>
 
                 <div className="active-job-details-grid">
-
                   <div>
-                    <span>
-                      Customer
-                    </span>
-
-                    <strong>
-                      {activeJob.customers
-                        ?.users
-                        ?.name ||
-                        "Customer"}
-                    </strong>
+                    <span>{t('workerDashboard.jobsTab.customer')}</span>
+                    <strong>{activeJob.customers?.users?.name || t('workerDashboard.jobsTab.customer')}</strong>
                   </div>
-
                   <div>
-                    <span>
-                      Payment
-                    </span>
-
-                    <strong>
-                      ₹
-                      {
-                        activeJob.price ||
-                        0
-                      }
-                    </strong>
+                    <span>{t('workerDashboard.activeTab.payment')}</span>
+                    <strong>₹{activeJob.price || 0}</strong>
                   </div>
-
                   <div>
-                    <span>
-                      Service
-                    </span>
-
-                    <strong>
-                      {
-                        activeJob.service_id
-                      }
-                    </strong>
+                    <span>{t('workerDashboard.activeTab.service')}</span>
+                    <strong>{activeJob.service_id}</strong>
                   </div>
-
                   <div>
-                    <span>
-                      Status
-                    </span>
-
-                    <strong>
-                      {activeJob.status}
-                    </strong>
+                    <span>{t('workerDashboard.activeTab.status')}</span>
+                    <strong>{activeJob.status}</strong>
                   </div>
-
                 </div>
 
-                {activeJob.status ===
-                "completed_pending_payment" ? (
-                  <p className="active-job-note">
-                    Marked done — waiting for the
-                    customer to complete payment.
-                  </p>
+                {activeJob.status === "completed_pending_payment" ? (
+                  <p className="active-job-note">{t('workerDashboard.activeTab.markedDone')}</p>
                 ) : (
                   <>
-                    <p className="active-job-note">
-                      Your customer destination and payment
-                      details will appear here.
-                    </p>
-
+                    <p className="active-job-note">{t('workerDashboard.activeTab.destNote')}</p>
                     <div className="active-job-actions">
-                      {activeJob.customer_lat &&
-                        activeJob.customer_lng && (
-                          <a
-                            className="action-btn secondary"
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${activeJob.customer_lat},${activeJob.customer_lng}&travelmode=driving`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Open Navigation
-                          </a>
-                        )}
-
+                      {activeJob.customer_lat && activeJob.customer_lng && (
+                        <a
+                          className="action-btn secondary"
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${activeJob.customer_lat},${activeJob.customer_lng}&travelmode=driving`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t('workerDashboard.activeTab.openNav')}
+                        </a>
+                      )}
                       <button
                         className="action-btn primary"
                         disabled={completingJob}
                         onClick={markJobComplete}
                       >
-                        {completingJob
-                          ? "Marking..."
-                          : "Mark Job Complete"}
+                        {completingJob ? t('workerDashboard.activeTab.marking') : t('workerDashboard.activeTab.markComplete')}
                       </button>
                     </div>
                   </>
                 )}
-
               </section>
             ) : (
               <div className="recent-empty">
-
-                <div className="empty-icon">
-                  ⚡
-                </div>
-
-                <h3>
-                  No active job
-                </h3>
-
-                <p>
-                  Accept a nearby job to see it here.
-                </p>
-
-                <button
-                  className="action-btn primary"
-                  onClick={() =>
-                    setActiveTab(
-                      "jobs"
-                    )
-                  }
-                >
-                  Find Nearby Jobs
+                <div className="empty-icon">⚡</div>
+                <h3>{t('workerDashboard.activeTab.noActive')}</h3>
+                <p>{t('workerDashboard.activeTab.acceptNearby')}</p>
+                <button className="action-btn primary" onClick={() => setActiveTab("jobs")}>
+                  {t('workerDashboard.activeTab.findNearby')}
                 </button>
-
               </div>
             )}
-
           </div>
         )}
-
         {/* ===================================================
             HISTORY
         =================================================== */}
-
-        {activeTab ===
-          "history" && (
+        {activeTab === "history" && (
           <div className="worker-tab-panel fade-in">
-
             <section className="stats-row">
-
               <div className="worker-stat-card">
-                <span>
-                  Total Jobs
-                </span>
-
-                <strong>
-                  {completedJobs}
-                </strong>
+                <span>{t('workerDashboard.historyTab.totalJobs')}</span>
+                <strong>{completedJobs}</strong>
               </div>
-
               <div className="worker-stat-card">
-                <span>
-                  Average Rating
-                </span>
-
-                <strong>
-                  ★{" "}
-                  {rating || "New"}
-                </strong>
+                <span>{t('workerDashboard.historyTab.avgRating')}</span>
+                <strong>★ {rating || t('workerDashboard.historyTab.new')}</strong>
               </div>
-
               <div className="worker-stat-card">
-                <span>
-                  Hourly Rate
-                </span>
-
-                <strong>
-                  ₹
-                  {
-                    hourlyRate
-                  }
-                </strong>
+                <span>{t('workerDashboard.historyTab.hourlyRate')}</span>
+                <strong>₹{hourlyRate}</strong>
               </div>
-
             </section>
 
             <section className="history-card">
-
               <div className="section-heading">
-
                 <div>
-                  <h2>
-                    Completed Work
-                  </h2>
-
-                  <p>
-                    Your previous service jobs
-                  </p>
+                  <h2>{t('workerDashboard.historyTab.completedWork')}</h2>
+                  <p>{t('workerDashboard.historyTab.prevJobs')}</p>
                 </div>
-
               </div>
 
               <div className="history-list">
-
-                {historyJobs.length >
-                0 ? (
-                  historyJobs.map(
-                    (
-                      job: any
-                    ) => (
-                      <div
-                        className="history-row"
-                        key={
-                          job.id
-                        }
-                      >
-
-                        <div className="history-icon">
-                          ✓
-                        </div>
-
-                        <div className="history-job-info">
-
-                          <strong>
-                            {job.service_id ||
-                              "Completed Service"}
-                          </strong>
-
-                          <span>
-                            {job.customers
-                              ?.users
-                              ?.name ||
-                              "Customer"}
-                          </span>
-
-                        </div>
-
-                        <span className="history-rating">
-                          Completed
-                        </span>
-
-                        <strong>
-                          ₹
-                          {
-                            job.price ||
-                            0
-                          }
-                        </strong>
-
-                        <span className="completed-pill">
-                          Completed
-                        </span>
-
+                {historyJobs.length > 0 ? (
+                  historyJobs.map((job: any) => (
+                    <div className="history-row" key={job.id}>
+                      <div className="history-icon">✓</div>
+                      <div className="history-job-info">
+                        <strong>{job.service_id || t('workerDashboard.jobsTab.completedService')}</strong>
+                        <span>{job.customers?.users?.name || t('workerDashboard.jobsTab.customer')}</span>
                       </div>
-                    )
-                  )
+                      <span className="history-rating">{t('workerDashboard.jobsTab.completed')}</span>
+                      <strong>₹{job.price || 0}</strong>
+                      <span className="completed-pill">{t('workerDashboard.jobsTab.completed')}</span>
+                    </div>
+                  ))
                 ) : (
-                  <div className="recent-empty">
-                    No completed jobs yet.
-                  </div>
+                  <div className="recent-empty">{t('workerDashboard.historyTab.noCompleted')}</div>
                 )}
-
               </div>
-
             </section>
-
           </div>
         )}
 
         {/* ===================================================
             PAYMENTS
         =================================================== */}
-
-        {activeTab ===
-          "payments" && (
+        {activeTab === "payments" && (
           <div className="worker-tab-panel fade-in">
-
             <section className="earnings-overview">
-
               <div className="earnings-card primary-earnings">
-
-                <span>
-                  Total Recorded Payments
-                </span>
-
-                <strong>
-                  ₹
-                  {
-                    totalPayments
-                  }
-                </strong>
-
-                <small>
-                  Linked to completed bookings
-                </small>
-
+                <span>{t('workerDashboard.paymentsTab.totalRecorded')}</span>
+                <strong>₹{totalPayments}</strong>
+                <small>{t('workerDashboard.paymentsTab.linkedCompleted')}</small>
               </div>
-
               <div className="earnings-card">
-
-                <span>
-                  Completed Jobs
-                </span>
-
-                <strong>
-                  {
-                    historyJobs.length
-                  }
-                </strong>
-
-                <small>
-                  Loaded from Supabase
-                </small>
-
+                <span>{t('workerDashboard.paymentsTab.completedJobs')}</span>
+                <strong>{historyJobs.length}</strong>
+                <small>{t('workerDashboard.paymentsTab.loadedSupabase')}</small>
               </div>
-
               <div className="earnings-card">
-
-                <span>
-                  Current Rate
-                </span>
-
-                <strong>
-                  ₹
-                  {
-                    hourlyRate
-                  }
-                </strong>
-
-                <small>
-                  Per hour
-                </small>
-
+                <span>{t('workerDashboard.paymentsTab.currentRate')}</span>
+                <strong>₹{hourlyRate}</strong>
+                <small>{t('workerDashboard.paymentsTab.perHour')}</small>
               </div>
-
             </section>
 
             <section className="history-card">
-
               <div className="section-heading">
-
                 <div>
-
-                  <h2>
-                    Payment History
-                  </h2>
-
-                  <p>
-                    Recorded payments from completed bookings
-                  </p>
-
+                  <h2>{t('workerDashboard.paymentsTab.paymentHistory')}</h2>
+                  <p>{t('workerDashboard.paymentsTab.recordedPayments')}</p>
                 </div>
-
               </div>
 
               <div className="payment-table">
-
                 <div className="payment-table-header">
-                  <span>
-                    Booking
-                  </span>
-
-                  <span>
-                    Method
-                  </span>
-
-                  <span>
-                    Amount
-                  </span>
-
-                  <span>
-                    Status
-                  </span>
+                  <span>{t('workerDashboard.paymentsTab.booking')}</span>
+                  <span>{t('workerDashboard.paymentsTab.method')}</span>
+                  <span>{t('workerDashboard.paymentsTab.amount')}</span>
+                  <span>{t('workerDashboard.activeTab.status')}</span>
                 </div>
 
-                {payments.length >
-                0 ? (
-                  payments.map(
-                    (
-                      payment: any
-                    ) => (
-                      <div
-                        className="payment-table-row"
-                        key={
-                          payment.id
-                        }
-                      >
-
-                        <span>
-                          {String(
-                            payment.booking_id
-                          ).slice(
-                            0,
-                            8
-                          )}
-                          …
-                        </span>
-
-                        <span>
-                          {
-                            payment.method ||
-                            "—"
-                          }
-                        </span>
-
-                        <strong>
-                          ₹
-                          {
-                            payment.amount ||
-                            0
-                          }
-                        </strong>
-
-                        <span className="paid-pill">
-                          {
-                            payment.status ||
-                            "Recorded"
-                          }
-                        </span>
-
-                      </div>
-                    )
-                  )
+                {payments.length > 0 ? (
+                  payments.map((payment: any) => (
+                    <div className="payment-table-row" key={payment.id}>
+                      <span>{String(payment.booking_id).slice(0, 8)}…</span>
+                      <span>{payment.method || "—"}</span>
+                      <strong>₹{payment.amount || 0}</strong>
+                      <span className="paid-pill">{payment.status || t('workerDashboard.paymentsTab.recorded')}</span>
+                    </div>
+                  ))
                 ) : (
-                  <div className="recent-empty">
-                    No payments recorded yet.
-                  </div>
+                  <div className="recent-empty">{t('workerDashboard.paymentsTab.noPayments')}</div>
                 )}
-
               </div>
-
             </section>
-
           </div>
         )}
 
         {/* ===================================================
             PROFILE
         =================================================== */}
-
-        {activeTab ===
-          "profile" && (
+        {activeTab === "profile" && (
           <div className="worker-tab-panel fade-in">
-
             <section className="worker-profile-card">
-
               <div className="profile-hero">
-
                 <div className="profile-large-avatar">
-                  {workerName
-                    .charAt(0)
-                    .toUpperCase()}
+                  {workerName.charAt(0).toUpperCase()}
                 </div>
-
                 <div>
-
-                  <h2>
-                    {workerName}
-                  </h2>
-
-                  <p>
-                    {skill}
-                  </p>
-
+                  <h2>{workerName}</h2>
+                  <p>{skill}</p>
                   <span>
-                    ★{" "}
-                    {rating ||
-                      "New"}{" "}
-                    ·{" "}
-                    {
-                      completedJobs
-                    }{" "}
-                    jobs completed
+                    ★ {rating || t('workerDashboard.historyTab.new')} · {completedJobs} {t('workerDashboard.profileTab.jobsCompleted')}
                   </span>
-
                 </div>
-
               </div>
 
               {/* PERSONAL */}
-
               <div className="profile-section">
-
-                <h3>
-                  Personal Information
-                </h3>
-
+                <h3>{t('workerDashboard.profileTab.personalInfo')}</h3>
                 <div className="profile-grid">
-
                   <div className="profile-field">
-
-                    <label>
-                      Full Name
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.fullName')}</label>
                     {isEditingProfile ? (
                       <input
                         className="edit-input"
-                        value={
-                          editForm.name
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              name:
-                                e.target
-                                  .value,
-                            }
-                          )
-                        }
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       />
                     ) : (
-                      <div className="field-value">
-                        {workerName}
-                      </div>
+                      <div className="field-value">{workerName}</div>
                     )}
-
                   </div>
-
                   <div className="profile-field">
-
-                    <label>
-                      Email
-                    </label>
-
-                    <div className="field-value">
-                      {workerData?.email ||
-                        "—"}
-                    </div>
-
+                    <label>{t('workerDashboard.profileTab.email')}</label>
+                    <div className="field-value">{workerData?.email || "—"}</div>
                   </div>
-
                   <div className="profile-field">
-
-                    <label>
-                      Phone
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.phone')}</label>
                     {isEditingProfile ? (
                       <input
                         className="edit-input"
-                        value={
-                          editForm.phone
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              phone:
-                                e.target
-                                  .value,
-                            }
-                          )
-                        }
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                       />
                     ) : (
-                      <div className="field-value">
-                        {
-                          workerData?.phone ||
-                          "—"
-                        }
-                      </div>
+                      <div className="field-value">{workerData?.phone || "—"}</div>
                     )}
-
                   </div>
-
                   <div className="profile-field">
-
-                    <label>
-                      Home Area
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.homeArea')}</label>
                     <div className="field-value">
-                      {
-                        workerData
-                          ?.home_address
-                          ?.locality ||
-                        workerData
-                          ?.home_address
-                          ?.district ||
-                        "—"
-                      }
+                      {workerData?.home_address?.locality || workerData?.home_address?.district || "—"}
                     </div>
-
                   </div>
-
                 </div>
-
               </div>
 
               {/* PROFESSIONAL */}
-
               <div className="profile-section">
-
-                <h3>
-                  Professional Information
-                </h3>
-
+                <h3>{t('workerDashboard.profileTab.profInfo')}</h3>
                 <div className="profile-grid">
-
                   <div className="profile-field">
-
-                    <label>
-                      Skill Category
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.skillCategory')}</label>
                     {isEditingProfile ? (
                       <input
                         className="edit-input"
-                        value={
-                          editForm.skill_category
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              skill_category:
-                                e.target
-                                  .value,
-                            }
-                          )
-                        }
+                        value={editForm.skill_category}
+                        onChange={(e) => setEditForm({ ...editForm, skill_category: e.target.value })}
                       />
                     ) : (
-                      <div className="field-value">
-                        {skill}
-                      </div>
+                      <div className="field-value">{skill}</div>
                     )}
-
                   </div>
-
                   <div className="profile-field">
-
-                    <label>
-                      Hourly Rate (₹)
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.hourlyRate')}</label>
                     {isEditingProfile ? (
                       <input
                         type="number"
                         min="0"
                         className="edit-input"
-                        value={
-                          editForm.hourly_rate
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              hourly_rate:
-                                Number(
-                                  e.target
-                                    .value
-                                ),
-                            }
-                          )
-                        }
+                        value={editForm.hourly_rate}
+                        onChange={(e) => setEditForm({ ...editForm, hourly_rate: Number(e.target.value) })}
                       />
                     ) : (
-                      <div className="field-value">
-                        ₹
-                        {
-                          hourlyRate
-                        }
-                        /hr
-                      </div>
+                      <div className="field-value">₹{hourlyRate}/hr</div>
                     )}
-
                   </div>
-
                   <div className="profile-field">
-
-                    <label>
-                      UPI ID
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.upiId')}</label>
                     {isEditingProfile ? (
                       <input
                         className="edit-input"
-                        value={
-                          editForm.upi_id
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              upi_id:
-                                e.target
-                                  .value,
-                            }
-                          )
-                        }
+                        value={editForm.upi_id}
+                        onChange={(e) => setEditForm({ ...editForm, upi_id: e.target.value })}
                       />
                     ) : (
-                      <div className="field-value">
-                        {
-                          worker?.upi_id ||
-                          "Not provided"
-                        }
-                      </div>
+                      <div className="field-value">{worker?.upi_id || t('workerDashboard.profileTab.notProvided')}</div>
                     )}
-
                   </div>
-
-                  {/* SERVICE RADIUS */}
-
                   <div className="profile-field">
-
-                    <label>
-                      Service Radius (km)
-                    </label>
-
+                    <label>{t('workerDashboard.profileTab.serviceRadius')}</label>
                     {isEditingProfile ? (
                       <input
                         type="number"
                         min="1"
                         max="100"
                         className="edit-input"
-                        value={
-                          editForm.service_radius_km
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setEditForm(
-                            {
-                              ...editForm,
-                              service_radius_km:
-                                Number(
-                                  e.target
-                                    .value
-                                ),
-                            }
-                          )
-                        }
+                        value={editForm.service_radius_km}
+                        onChange={(e) => setEditForm({ ...editForm, service_radius_km: Number(e.target.value) })}
                       />
                     ) : (
                       <div className="field-value radius-value">
-                        <strong>
-                          {
-                            serviceRadius
-                          }{" "}
-                          km
-                        </strong>
-
-                        <span>
-                          Used for job matching
-                        </span>
+                        <strong>{serviceRadius} km</strong>
+                        <span>{t('workerDashboard.profileTab.usedForMatching')}</span>
                       </div>
                     )}
-
                   </div>
-
                 </div>
-
               </div>
 
               {/* SERVICE / LOCATION */}
-
               <div className="profile-section">
-
-                <h3>
-                  Service & Location
-                </h3>
-
+                <h3>{t('workerDashboard.profileTab.serviceLocation')}</h3>
                 <div className="profile-location-grid">
-
                   <div className="location-info-card">
-
-                    <span>
-                      Current location
-                    </span>
-
+                    <span>{t('workerDashboard.profileTab.currentLocation')}</span>
                     <strong>
                       {location
-                        ? `${location.lat.toFixed(
-                            5
-                          )}, ${location.lng.toFixed(
-                            5
-                          )}`
-                        : "Location unavailable"}
+                        ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`
+                        : t('workerDashboard.profileTab.locUnavailable')}
                     </strong>
-
                   </div>
-
                   <div className="location-info-card">
-
-                    <span>
-                      Job matching radius
-                    </span>
-
-                    <strong>
-                      {
-                        serviceRadius
-                      }{" "}
-                      km
-                    </strong>
-
+                    <span>{t('workerDashboard.profileTab.jobMatchingRadius')}</span>
+                    <strong>{serviceRadius} km</strong>
                   </div>
-
                   <div className="location-info-card">
-
-                    <span>
-                      Job alerts
-                    </span>
-
-                    <strong
-                      className={
-                        status ===
-                        "Available"
-                          ? "text-success"
-                          : "text-danger"
-                      }
-                    >
-                      {status ===
-                      "Available"
-                        ? "Enabled"
-                        : "Disabled"}
+                    <span>{t('workerDashboard.profileTab.jobAlerts')}</span>
+                    <strong className={status === "Available" ? "text-success" : "text-danger"}>
+                      {status === "Available" ? t('workerDashboard.profileTab.enabled') : t('workerDashboard.profileTab.disabled')}
                     </strong>
-
                   </div>
-
                 </div>
-
               </div>
 
               {/* BUTTONS */}
-
               <div className="profile-actions">
-
                 {isEditingProfile ? (
                   <>
                     <button
                       className="action-btn secondary"
-                      disabled={
-                        savingProfile
-                      }
-                      onClick={() =>
-                        setIsEditingProfile(
-                          false
-                        )
-                      }
+                      disabled={savingProfile}
+                      onClick={() => setIsEditingProfile(false)}
                     >
-                      Cancel
+                      {t('workerDashboard.profileTab.cancel')}
                     </button>
-
                     <button
                       className="action-btn primary"
-                      disabled={
-                        savingProfile
-                      }
-                      onClick={
-                        handleSaveProfile
-                      }
+                      disabled={savingProfile}
+                      onClick={handleSaveProfile}
                     >
-                      {savingProfile
-                        ? "Saving..."
-                        : "Save Changes"}
+                      {savingProfile ? t('workerDashboard.profileTab.saving') : t('workerDashboard.profileTab.saveChanges')}
                     </button>
                   </>
                 ) : (
-                  <button
-                    className="action-btn primary"
-                    onClick={
-                      handleEditClick
-                    }
-                  >
-                    Edit Profile
+                  <button className="action-btn primary" onClick={handleEditClick}>
+                    {t('workerDashboard.profileTab.editProfile')}
                   </button>
                 )}
-
               </div>
-
             </section>
-
           </div>
         )}
-
       </main>
-
 
 
     </div>

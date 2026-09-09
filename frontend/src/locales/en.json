@@ -1,0 +1,279 @@
+{
+  "landing": {
+    "nav": {
+      "howItWorks": "How it works",
+      "forWorkers": "For Workers",
+      "about": "About"
+    },
+    "hero": {
+      "titleLine1": "Verified workers.",
+      "titleLine2": "Fair pay.",
+      "titleLine3": "Trusted community.",
+      "subtitle": "India's first worker-owned cooperative marketplace for trusted household and community services.",
+      "customer": "CUSTOMER",
+      "customerTitle": "I need a service",
+      "customerDesc": "Book verified professionals for your home.",
+      "customerBtn": "Login to find a Pro",
+      "worker": "WORKER",
+      "workerTitle": "I'm a skilled worker",
+      "workerDesc": "Earn fair wages. Find suitable work.",
+      "workerBtn": "Login to View available Jobs"
+    },
+    "how": {
+      "title": "How it works - As a Customer",
+      "step1": "Book",
+      "step1Desc": "Search for verified services and schedule a convenient time.",
+      "step2": "Get Matched",
+      "step2Desc": "Connect directly with a verified cooperative member near you.",
+      "step3": "Get it Done",
+      "step3Desc": "Experience quality service while ensuring fair wages."
+    },
+    "trust": {
+      "title": "BACKED BY LABOUR COOPERATIVE FEDERATIONS",
+      "item1": "Federation One",
+      "item2": "Co-op Trust",
+      "item3": "Worker's Union",
+      "item4": "Skill Guild"
+    },
+    "services": {
+      "title": "Popular Services",
+      "electricians": "Electricians",
+      "plumbers": "Plumbers",
+      "carpenters": "Carpenters",
+      "painters": "Painters",
+      "cleaners": "Cleaners"
+    },
+    "footer": {
+      "copyright": "© 2026 Co-op Serve. Powered by Labour Cooperative Federations."
+    }
+  },
+  "customerDashboard": {
+    "loading": "Loading your dashboard...",
+    "sidebar": {
+      "brand": "Co-op Serve",
+      "discover": "Discover Services",
+      "bookings": "My Bookings",
+      "profile": "Profile Settings",
+      "signOut": "Sign Out",
+      "defaultName": "Customer",
+      "defaultRole": "Member"
+    },
+    "header": {
+      "discoverTitle": "Discover Trusted Workers",
+      "availableCategory": "Available {{category}}s",
+      "bookingsTitle": "Your Active & Past Bookings",
+      "profileTitle": "Manage Your Profile",
+      "searchPlaceholder": "What do you need help with?"
+    },
+    "services": {
+      "findBtn": "Find a {{service}}"
+    },
+    "filters": {
+      "back": "← Back to Services",
+      "sortBy": "Sort By",
+      "sortRecommended": "Recommended",
+      "sortPremium": "Highest Rated",
+      "sortBudget": "Lowest Price",
+      "sortNearest": "Nearest",
+      "maxPrice": "Max Price (₹/hr)",
+      "any": "Any",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "verifiedOnly": "Verified Only",
+      "applyFilters": "Apply Filters"
+    },
+    "workers": {
+      "finding": "Finding verified {{category}}s near you...",
+      "away": "{{distance}} km away (~{{eta}} mins)",
+      "rating": "Rating",
+      "new": "New",
+      "jobs": "Jobs",
+      "rate": "Rate",
+      "selected": "Selected ✓",
+      "select": "Select Worker",
+      "noMatch": "No {{category}}s match your criteria.",
+      "tryAdjusting": "Try adjusting your filters or checking back later."
+    },
+    "bookings": {
+      "loading": "Loading your bookings...",
+      "noBookings": "No bookings yet.",
+      "headToDiscover": "Head to Discover Services to request a worker.",
+      "activeTitle": "Active bookings",
+      "pastTitle": "Past bookings",
+      "serviceRequest": "Service Request",
+      "waiting": "Waiting for response... Expires in",
+      "cancelRequest": "Cancel Request",
+      "accepted": "{{workerName}} has accepted your request and is on the way!",
+      "viewMap": "🗺️ View Live Worker Location on Map",
+      "waitingGps": "Waiting for worker's live GPS coordinates...",
+      "completePay": "Complete & Pay",
+      "notCompleted": "This request was not completed.",
+      "completed": "Job completed and paid."
+    },
+    "profile": {
+      "defaultTitle": "Customer Profile",
+      "account": "{{role}} Account",
+      "fullName": "Full Name",
+      "notProvided": "Not provided",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "accountId": "Account ID"
+    },
+    "floatingBar": {
+      "selectedCount": "{{count}} of 3 maximum workers selected",
+      "sending": "Sending Requests...",
+      "requestBtn": "Request Selected Workers"
+    },
+    "paymentModal": {
+      "title": "Complete Payment",
+      "amountDue": "Amount due:",
+      "paymentMethod": "Payment Method",
+      "upi": "UPI",
+      "cash": "Cash",
+      "rateWorker": "Rate Your Worker",
+      "review": "Review (optional)",
+      "reviewPlaceholder": "How was the service?",
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "paySubmit": "Pay & Submit Rating"
+    },
+    "serviceCards": {
+      "electrician": "Electrician",
+      "electricianDesc": "Wiring, repairs, and installations.",
+      "plumber": "Plumber",
+      "plumberDesc": "Pipe leaks, fittings, and bathroom setups.",
+      "carpenter": "Carpenter",
+      "carpenterDesc": "Furniture repair, doors, and custom woodwork.",
+      "cleaner": "Cleaner",
+      "cleanerDesc": "Deep cleaning for homes and apartments.",
+      "painter": "Painter",
+      "painterDesc": "Interior and exterior wall painting.",
+      "appliance": "Appliance Repair",
+      "applianceDesc": "AC, Fridge, and Washing Machine fixing.",
+      "gardener": "Gardener",
+      "gardenerDesc": "Lawn care, planting, and landscaping."
+    }
+  },
+  "workerDashboard": {
+    "loading": "Loading your dashboard...",
+    "sidebar": {
+      "brand": "Co-op Serve",
+      "signOut": "Sign Out",
+      "tabs": {
+        "jobs": "Find Jobs",
+        "active": "My Jobs",
+        "history": "Work History",
+        "payments": "Payments",
+        "profile": "Profile"
+      },
+      "status": {
+        "available": "Available",
+        "busy": "Busy",
+        "dnd": "Do not disturb",
+        "offline": "Appear offline",
+        "saving": "Saving..."
+      }
+    },
+    "header": {
+      "greeting": "Good evening, {{name}}",
+      "myJobs": "My Jobs",
+      "workHistory": "Work History",
+      "paymentHistory": "Payment History",
+      "manageProfile": "Manage Your Profile",
+      "availableText": "You're available for nearby {{skill}} jobs.",
+      "pausedText": "You're not currently receiving new job alerts."
+    },
+    "jobsTab": {
+      "receivingAlerts": "Receiving nearby job alerts",
+      "alertsPaused": "New job alerts are paused",
+      "changeStatus": "Change status",
+      "location": "Location:",
+      "jobs": "Jobs:",
+      "nearbyJobs": "Nearby Jobs",
+      "checking": "Checking for nearby jobs...",
+      "matchingJobs": "{{count}} matching jobs within your {{radius}} km service radius",
+      "waitingLocation": "Waiting for your location",
+      "customer": "Customer",
+      "price": "Price",
+      "distance": "Distance",
+      "reject": "Reject",
+      "approve": "Approve",
+      "processing": "Processing...",
+      "noMatching": "No matching jobs nearby",
+      "checkAgain": "We'll check again automatically. Your current service radius is {{radius}} km.",
+      "changeToAvailable": "Change your status to Available to receive job alerts.",
+      "recentWork": "Recent Work",
+      "latestCompleted": "Your latest completed jobs",
+      "viewAll": "View all →",
+      "completedService": "Completed Service",
+      "completed": "Completed",
+      "noCompletedWork": "No completed work yet."
+    },
+    "activeTab": {
+      "title": "Active Job",
+      "subtitle": "Your current service request",
+      "payment": "Payment",
+      "service": "Service",
+      "status": "Status",
+      "markedDone": "Marked done — waiting for the customer to complete payment.",
+      "destNote": "Your customer destination and payment details will appear here.",
+      "openNav": "Open Navigation",
+      "markComplete": "Mark Job Complete",
+      "marking": "Marking...",
+      "noActive": "No active job",
+      "acceptNearby": "Accept a nearby job to see it here.",
+      "findNearby": "Find Nearby Jobs"
+    },
+    "historyTab": {
+      "totalJobs": "Total Jobs",
+      "avgRating": "Average Rating",
+      "hourlyRate": "Hourly Rate",
+      "new": "New",
+      "completedWork": "Completed Work",
+      "prevJobs": "Your previous service jobs",
+      "noCompleted": "No completed jobs yet."
+    },
+    "paymentsTab": {
+      "totalRecorded": "Total Recorded Payments",
+      "linkedCompleted": "Linked to completed bookings",
+      "completedJobs": "Completed Jobs",
+      "loadedSupabase": "Loaded from Supabase",
+      "currentRate": "Current Rate",
+      "perHour": "Per hour",
+      "paymentHistory": "Payment History",
+      "recordedPayments": "Recorded payments from completed bookings",
+      "booking": "Booking",
+      "method": "Method",
+      "amount": "Amount",
+      "recorded": "Recorded",
+      "noPayments": "No payments recorded yet."
+    },
+    "profileTab": {
+      "jobsCompleted": "jobs completed",
+      "personalInfo": "Personal Information",
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "homeArea": "Home Area",
+      "notProvided": "Not provided",
+      "profInfo": "Professional Information",
+      "skillCategory": "Skill Category",
+      "hourlyRate": "Hourly Rate (₹)",
+      "upiId": "UPI ID",
+      "serviceRadius": "Service Radius (km)",
+      "usedForMatching": "Used for job matching",
+      "serviceLocation": "Service & Location",
+      "currentLocation": "Current location",
+      "locUnavailable": "Location unavailable",
+      "jobMatchingRadius": "Job matching radius",
+      "jobAlerts": "Job alerts",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "editProfile": "Edit Profile"
+    }
+  }
+}
