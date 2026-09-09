@@ -452,19 +452,21 @@
 .payment-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(16, 36, 59, 0.45);
+  background: rgba(16, 36, 59, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .payment-modal {
   background: #fff;
   border-radius: 12px;
   padding: 32px;
-  width: 100%;
+  width: 90%;
   max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 20px 40px rgba(16, 36, 59, 0.2);
   display: flex;
   flex-direction: column;
@@ -826,7 +828,7 @@
 
 .floating-action-bar {
   position: fixed;
-  bottom: 40px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   background: #10243b;
@@ -837,7 +839,7 @@
   align-items: center;
   gap: 20px;
   box-shadow: 0 10px 30px rgba(16, 36, 59, 0.3);
-  z-index: 100;
+  z-index: 1000;
   font-size: 13px;
   font-weight: 600;
 }
@@ -849,4 +851,54 @@
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #e5e9ee;
+}
+
+/* =========================================================
+   TOAST NOTIFICATION
+   ========================================================= */
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 12px 32px rgba(16, 36, 59, 0.18);
+  border-left: 4px solid #c44848;
+  max-width: 380px;
+  z-index: 2000;
+}
+
+.toast-notification.success {
+  border-left-color: #087c73;
+}
+
+.toast-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: 13px;
+  font-weight: 600;
+  color: #10243b;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: #60768b;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  color: #10243b;
 }

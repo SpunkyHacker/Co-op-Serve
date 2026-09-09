@@ -81,6 +81,16 @@ def parse_ts(ts: str) -> datetime:
 # Terminal statuses that mean "this particular booking row is no longer in play"
 INACTIVE_STATUSES = ("pending", "rejected", "cancelled", "expired")
 
+# Statuses that mean the CUSTOMER still has something unresolved: either a search
+# still in flight, a worker actively assigned/working, or a completed job that's
+# awaiting payment. While any booking of theirs is in one of these states, they
+# should not be allowed to start another booking request. This is intentionally
+# a separate constant from INACTIVE_STATUSES above - that tuple is about whether
+# a single row within a booking *group* is still "in play" for matching purposes,
+# which is a different question from whether the customer as a whole is free to
+# start a brand-new booking.
+BLOCKING_BOOKING_STATUSES = ("pending", "accepted", "work_done", "completed_pending_payment")
+
 # --- UTILITY FUNCTIONS ---
 
 def send_email(receiver_email: str, otp_code: str):
@@ -216,6 +226,14 @@ class VerifyPaymentModel(BaseModel):
     razorpay_signature: str
     rating_given: int
     review_text: Optional[str] = ""
+    
+class GroupCancelModel(BaseModel):
+    group_id: str
+
+class StatusUpdate(BaseModel):
+    booking_id: str
+    status: str
+
 # --- AUTH ENDPOINTS ---
 
 @app.post("/api/auth/request-otp")
@@ -275,6 +293,24 @@ def search_workers(
 
 @app.post("/api/bookings/request")
 async def create_booking_request(data: BookingRequestModel):
+    # Block the customer from starting a new booking while an earlier one of theirs
+    # is still unresolved - either a search still in flight, a worker actively
+    # assigned/working, or a completed job that's awaiting payment. This is what
+    # was letting customers queue up a new worker before paying the previous one
+    # (e.g. while a booking sits in "completed_pending_payment").
+    existing_res = (
+        supabase.table("bookings")
+        .select("id, status")
+        .eq("customer_id", data.customer_id)
+        .in_("status", list(BLOCKING_BOOKING_STATUSES))
+        .execute()
+    )
+    if existing_res.data:
+        raise HTTPException(
+            status_code=409,
+            detail="You have an existing booking that needs to be completed or paid for before requesting a new one."
+        )
+
     # 1. Fetch the actual UUID for the category string
     service_res = supabase.table("services").select("id").eq("category", data.service_id).execute()
     
@@ -431,22 +467,12 @@ def customer_track_group(group_id: str):
         "worker_live_lng": loc.get("location_lng"),
         "details": details
     }
-from pydantic import BaseModel
-from fastapi import HTTPException
-
-
-class GroupCancelModel(BaseModel):
-    group_id: str
 
 @app.post("/api/bookings/group/cancel")
 async def customer_cancel_group(data: GroupCancelModel):
     # Cancel all pending requests for this group ID
     supabase.table("bookings").update({"status": "cancelled"}).eq("group_id", data.group_id).eq("status", "pending").execute()
     return {"status": "success", "message": "Requests cancelled."}
-    status: str
-class StatusUpdate(BaseModel):
-    booking_id: str
-    status: str
 
 @app.put("/api/bookings/status")
 def update_booking_status(payload: StatusUpdate):
@@ -539,6 +565,7 @@ async def verify_and_finalize(data: VerifyPaymentModel):
     except Exception as e:
         print(f"CRITICAL VERIFY/FINALIZE ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/workers/update-location")
 async def update_worker_location(data: WorkerLocationUpdate):
     supabase.table("workers").update({"location_lat": data.lat, "location_lng": data.lng}).eq("id", data.worker_id).execute()
