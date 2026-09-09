@@ -285,7 +285,8 @@ function WorkerDashboard() {
 
 if (!error) {
   // Handle both array and object responses safely to satisfy TypeScript
-  const serviceData = Array.isArray(data?.services) ? data.services[0] : data?.services;
+  const services = data?.services;
+  const serviceData = Array.isArray(services) ? services[0] : services;
   
   setActiveJob(
     data ? { ...data, service_id: (serviceData as any)?.category || "Service Request" } : null

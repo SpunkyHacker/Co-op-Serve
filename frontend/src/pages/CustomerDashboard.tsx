@@ -770,8 +770,26 @@ function CustomerDashboard() {
                       )}
                     </div>
                   );
-                })}
-              </div>
+                };
+
+                return (
+                  <div className="bookings-list">
+                    {activeBookings.length > 0 && (
+                      <>
+                        <h3 className="booking-section-title">Active bookings</h3>
+                        {activeBookings.map(renderCard)}
+                      </>
+                    )}
+
+                    {pastBookings.length > 0 && (
+                      <>
+                        <h3 className="booking-section-title">Past bookings</h3>
+                        {pastBookings.map(renderCard)}
+                      </>
+                    )}
+                  </div>
+                );
+              })()
             )}
           </div>
         )}
